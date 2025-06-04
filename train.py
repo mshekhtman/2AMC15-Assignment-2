@@ -9,7 +9,7 @@ try:
     from world import Environment
     from agents.random_agent import RandomAgent
     from agents.heuristic_agent import HeuristicAgent  # NEW
-    # from agents.simple_dqn_agent import SimpleDQNAgent  # Uncomment when implementing DQN
+    from agents.DQN.DQN_agent import DQNAgent  # Uncomment when implementing DQN
 except ModuleNotFoundError:
     from os import path
     from os import pardir
@@ -67,8 +67,8 @@ def main(grid_paths: list[Path], no_gui: bool, iters: int, fps: int,
             agent = RandomAgent()
         elif agent_type == "heuristic":
             agent = HeuristicAgent()
-        # elif agent_type == "dqn":
-        #     agent = SimpleDQNAgent()  # Uncomment when implementing
+        elif agent_type == "dqn":
+            agent = DQNAgent()  # Uncomment when implementing
         else:
             raise ValueError(f"Unknown agent type: {agent_type}")
         
