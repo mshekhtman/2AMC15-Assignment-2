@@ -9,7 +9,7 @@ import numpy as np
 try:
     from world import Environment
     from agents.random_agent import RandomAgent
-    from agents.heuristic_agent import HeuristicAgent
+    from agents.heuristic_agent import HeuristicAgent  # NEW
     # from agents.simple_dqn_agent import SimpleDQNAgent  # Uncomment when implementing DQN
 except ModuleNotFoundError:
     from os import path
@@ -75,11 +75,8 @@ def main(grid_paths: list[Path], no_gui: bool, iters: int, fps: int,
             agent = RandomAgent()
         elif agent_type == "heuristic":
             agent = HeuristicAgent()
-        elif agent_type == "dqn":
-            # Uncomment when DQN is implemented
-            # agent = SimpleDQNAgent()
-            print("DQN agent not yet implemented. Using heuristic instead.")
-            agent = HeuristicAgent()
+        # elif agent_type == "dqn":
+        #     agent = SimpleDQNAgent()  # Uncomment when implementing
         else:
             raise ValueError(f"Unknown agent type: {agent_type}")
         
