@@ -22,7 +22,7 @@ pandas>=1.5.0
 # Machine Learning Utils
 scikit-learn>=1.0.0
 
-# Advanced RL Libraries (optional, for advanced implementations)
+# Advanced RL Libraries (optional, base DQN implementation)
 gym>=0.26.0
 stable-baselines3>=1.7.0
 

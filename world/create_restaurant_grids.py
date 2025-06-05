@@ -66,7 +66,7 @@ def create_simple_restaurant():
         grid.place_object(x, y, "target")
     
     # Save the grid
-    save_path = Path("grid_configs/simple_restaurant.npy")
+    save_path = Path("grid_configs/A2/simple_restaurant.npy")
     grid.save_grid_file(save_path)
     print(f"Simple restaurant grid saved to {save_path}")
     return grid
@@ -95,7 +95,7 @@ def create_corridor_test():
     for x, y in targets:
         grid.place_object(x, y, "target")
     
-    save_path = Path("grid_configs/corridor_test.npy")
+    save_path = Path("grid_configs/A2/corridor_test.npy")
     grid.save_grid_file(save_path)
     print(f"Corridor test grid saved to {save_path}")
     return grid
@@ -133,7 +133,7 @@ def create_maze_challenge():
     for x, y in targets:
         grid.place_object(x, y, "target")
     
-    save_path = Path("grid_configs/maze_challenge.npy")
+    save_path = Path("grid_configs/A2/maze_challenge.npy")
     grid.save_grid_file(save_path)
     print(f"Maze challenge grid saved to {save_path}")
     return grid
@@ -157,7 +157,7 @@ def create_open_space():
     for x, y in targets:
         grid.place_object(x, y, "target")
     
-    save_path = Path("grid_configs/open_space.npy")
+    save_path = Path("grid_configs/A2/open_space.npy")
     grid.save_grid_file(save_path)
     print(f"Open space grid saved to {save_path}")
     return grid
@@ -214,7 +214,7 @@ def create_assignment_grid():
     for x, y in delivery_targets:
         grid.place_object(x, y, "target")
     
-    save_path = Path("grid_configs/assignment2_main.npy")
+    save_path = Path("grid_configs/A2/assignment2_main.npy")
     grid.save_grid_file(save_path)
     print(f"Assignment 2 main grid saved to {save_path}")
     return grid
@@ -259,7 +259,7 @@ def visualize_grid_layout(grid_path: Path):
 
 if __name__ == "__main__":
     # Ensure grid_configs directory exists
-    Path("grid_configs").mkdir(exist_ok=True)
+    Path("grid_configs/A2").mkdir(exist_ok=True)
     
     print("Creating specialized restaurant grids for 10D environment...")
     
@@ -276,7 +276,7 @@ if __name__ == "__main__":
     # Show layouts
     for grid_name in ["open_space.npy", "simple_restaurant.npy", 
                      "corridor_test.npy", "assignment2_main.npy"]:
-        visualize_grid_layout(Path(f"grid_configs/{grid_name}"))
+        visualize_grid_layout(Path(f"grid_configs/A2/{grid_name}"))
     
     print("\nRecommended usage:")
     print("- open_space.npy: Basic agent testing")
