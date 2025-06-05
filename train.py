@@ -9,8 +9,8 @@ import numpy as np
 try:
     from world import Environment
     from agents.random_agent import RandomAgent
-    from agents.heuristic_agent import HeuristicAgent  # NEW
-    # from agents.simple_dqn_agent import SimpleDQNAgent  # Uncomment when implementing DQN
+    from agents.heuristic_agent import HeuristicAgent
+    from agents.DQN_agent import DQNAgent  # Updated import
 except ModuleNotFoundError:
     from os import path
     from os import pardir
@@ -23,6 +23,7 @@ except ModuleNotFoundError:
     from world import Environment
     from agents.random_agent import RandomAgent
     from agents.heuristic_agent import HeuristicAgent
+    from agents.DQN_agent import DQNAgent
 
 
 def parse_args():
@@ -75,8 +76,9 @@ def main(grid_paths: list[Path], no_gui: bool, iters: int, fps: int,
             agent = RandomAgent()
         elif agent_type == "heuristic":
             agent = HeuristicAgent()
-        # elif agent_type == "dqn":
-        #     agent = SimpleDQNAgent()  # Uncomment when implementing
+        elif agent_type == "dqn":
+            agent = DQNAgent(state_dim=10, action_dim=4)  # Updated for 10D state space
+            print("DQN agent initialized for 10D continuous state space")
         else:
             raise ValueError(f"Unknown agent type: {agent_type}")
         
@@ -131,9 +133,15 @@ def main(grid_paths: list[Path], no_gui: bool, iters: int, fps: int,
         print(f"Average episode length: {np.mean(episode_lengths):.1f}")
         print(f"Success rate: {(success_count / episodes) * 100:.1f}%")
         print(f"Best episode reward: {max(episode_rewards):.2f}")
-        print(f"Shortest successful episode: {min([l for i, l in enumerate(episode_lengths) if episode_rewards[i] > 0]):.0f} steps")
         
-        # Evaluate the trained agent (Assignment 1 style)
+        # Only show shortest successful episode if there were any successes
+        successful_lengths = [l for i, l in enumerate(episode_lengths) if episode_rewards[i] > 0]
+        if successful_lengths:
+            print(f"Shortest successful episode: {min(successful_lengths):.0f} steps")
+        else:
+            print("No successful episodes completed")
+        
+        # Evaluate the trained agent (Assignment 1 style) - THIS CREATES THE PATH IMAGE
         print(f"\n=== EVALUATING AGENT ===")
         Environment.evaluate_agent(grid, agent, iters, sigma, 
                                  agent_start_pos=start_pos,
