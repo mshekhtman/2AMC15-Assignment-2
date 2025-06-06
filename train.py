@@ -130,16 +130,29 @@ def main(grid_paths: list[Path], no_gui: bool, iters: int, fps: int,
             episode_rewards.append(episode_reward)
             episode_lengths.append(episode_length)
             
-            # Print progress every 20 episodes
+            # Print progress and evaluate DQN without e-greedy every 20 episodes
             if episode % 20 == 0:
                 avg_reward = np.mean(episode_rewards[-20:])
                 avg_length = np.mean(episode_lengths[-20:])
                 success_rate = (success_count / (episode + 1)) * 100
                 print(f"Episode {episode}: Avg Reward = {avg_reward:.2f}, "
                       f"Avg Length = {avg_length:.1f}, Success Rate = {success_rate:.1f}%")
+                
+                # Log DQN rewards if training DQN agent has started
+                if agent_type == "dqn" and len(agent.replay_buffer) > agent.min_replay_size:
+                    stats = Environment.evaluate_DQN_agent(grid, agent, iters, sigma, 
+                                 agent_start_pos=start_pos,
+                                 random_seed=random_seed, 
+                                 state_representation=state_representation,
+                                 show_images=not no_gui)
+                    logger.log_DQN_rewards(episode, stats['cumulative_reward'])
+                    
+
+            
 
         # After all episodes, plot the rewards
         logger.plot_target_rewards()
+        logger.plot_DQN_rewards()
 
         # Final statistics (Assignment 1 style)
         print(f"\n=== TRAINING COMPLETED ===")

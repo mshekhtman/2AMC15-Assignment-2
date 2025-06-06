@@ -29,19 +29,35 @@ class Logger:
         self.epsilon_decay = epsilon_decay
 
         self.target_rewards = []
-        self.DQN_rewards = []
+        self.DQN_rewards = {}
     
     def log_target_rewards(self, reward):
         self.target_rewards.append(reward)
     
+    def log_DQN_rewards(self, episode, DQNreward):
+        self.DQN_rewards[episode] = DQNreward
+    
     def plot_target_rewards(self):       
         timestamp = datetime.now().strftime("%Y-%m-%d__%H-%M-%S")
-        filename = f"{timestamp}_targetrewardsplot.png"
+        filename = f"results/{timestamp}_targetrewardsplot.png"
         plt.figure(figsize=(10, 5))
         plt.plot(self.target_rewards, label='Episode Rewards')
         plt.xlabel('Episode')
         plt.ylabel('Reward')
-        plt.title('Target ewards Over Episodes')
+        plt.title('Target Rewards Over Episodes')
+        plt.legend()
+        plt.grid()
+        plt.savefig(filename)
+        plt.close()
+    
+    def plot_DQN_rewards(self):
+        timestamp = datetime.now().strftime("%Y-%m-%d__%H-%M-%S")
+        filename = f"results/{timestamp}_DQNrewardsplot.png"
+        plt.figure(figsize=(10, 5))
+        plt.plot(self.DQN_rewards.keys(), self.DQN_rewards.values(), label='DQN Rewards')
+        plt.xlabel('Episode')
+        plt.ylabel('Reward')
+        plt.title('DQN Rewards Over Episodes')
         plt.legend()
         plt.grid()
         plt.savefig(filename)
