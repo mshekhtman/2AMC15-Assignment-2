@@ -11,6 +11,7 @@ try:
     from agents.random_agent import RandomAgent
     from agents.heuristic_agent import HeuristicAgent
     from agents.DQN_agent import DQNAgent  # Updated import
+    from logger import Logger
 except ModuleNotFoundError:
     from os import path
     from os import pardir
@@ -70,7 +71,8 @@ def main(grid_paths: list[Path], no_gui: bool, iters: int, fps: int,
         env = Environment(grid, no_gui, sigma=sigma, target_fps=fps, 
                           random_seed=random_seed, state_representation=state_representation,
                           agent_start_pos=start_pos)
-        
+
+
         # Initialize agent based on type
         if agent_type == "random":
             agent = RandomAgent()
@@ -82,6 +84,10 @@ def main(grid_paths: list[Path], no_gui: bool, iters: int, fps: int,
         else:
             raise ValueError(f"Unknown agent type: {agent_type}")
         
+        # Create a logger to keep track of training parameters and performance
+        logger = Logger(grid, sigma,  agent.gamma, agent.lr, agent.batch_size, agent.buffer_size, agent.min_replay_size,
+                        agent.target_update_freq, agent.epsilon, agent.epsilon_min, agent.epsilon_decay)
+
         # Training statistics
         episode_rewards = []
         episode_lengths = []
@@ -95,7 +101,12 @@ def main(grid_paths: list[Path], no_gui: bool, iters: int, fps: int,
             
             for step in range(iters):
                 # Agent takes an action
-                action = agent.take_action(state)
+                if agent_type == "dqn":
+                    # For DQN agent, use the training action method during training
+                    action = agent.take_training_action(state)
+                else:
+                    # For other agents, use their respective action methods
+                    action = agent.take_action(state)
 
                 # Execute action in environment
                 next_state, reward, terminated, info = env.step(action)
@@ -112,7 +123,10 @@ def main(grid_paths: list[Path], no_gui: bool, iters: int, fps: int,
                 if terminated:
                     success_count += 1
                     break
-            
+
+            # log target rewards
+            logger.log_target_rewards(episode_reward)
+
             episode_rewards.append(episode_reward)
             episode_lengths.append(episode_length)
             
@@ -123,6 +137,9 @@ def main(grid_paths: list[Path], no_gui: bool, iters: int, fps: int,
                 success_rate = (success_count / (episode + 1)) * 100
                 print(f"Episode {episode}: Avg Reward = {avg_reward:.2f}, "
                       f"Avg Length = {avg_length:.1f}, Success Rate = {success_rate:.1f}%")
+
+        # After all episodes, plot the rewards
+        logger.plot_target_rewards()
 
         # Final statistics (Assignment 1 style)
         print(f"\n=== TRAINING COMPLETED ===")

@@ -68,6 +68,7 @@ class DQNAgent(BaseAgent):
         self.target_update_freq = target_update_freq
         
         # Experience replay buffer
+        self.buffer_size = buffer_size
         self.replay_buffer = deque(maxlen=buffer_size)
         
         # Device configuration
@@ -96,7 +97,7 @@ class DQNAgent(BaseAgent):
         
         print(f"DQN Agent initialized with {state_dim}D state space")
     
-    def take_action(self, state, training=True):
+    def take_training_action(self, state, training=True):
         """Take action using epsilon-greedy policy.
         
         Args:
@@ -121,6 +122,17 @@ class DQNAgent(BaseAgent):
                 action = torch.argmax(q_values, dim=1).item()
             
             return action
+        
+    def take_action(self, state):
+        """Take action using current policy (for evaluation).
+        
+        Args:
+            state: Current state (10D vector or compatible format)
+            
+        Returns:
+            action: Integer action in [0, 3]
+        """
+        return self.take_training_action(state, training=False)
     
     def update(self, state, reward, action, next_state=None, done=False):
         """Update the agent with new experience.
