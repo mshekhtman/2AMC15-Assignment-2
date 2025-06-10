@@ -86,39 +86,68 @@ python train.py grid_configs/A2/simple_restaurant.npy --agent_type dqn --episode
 python train.py grid_configs/A2/assignment2_main.npy --agent_type dqn --episodes 200 --no_gui --agent_start_pos 3 9
 ```
 
-### **4. Performance Comparison**
+### **4. PPO Agent Testing**
+
+#### Quick PPO Validation
+```bash
+# Simple grid (fast training)
+python train.py grid_configs/open_space.npy --agent_type ppo --episodes 50 --no_gui
+
+# Restaurant layout
+python train.py grid_configs/A2/simple_restaurant.npy --agent_type ppo --episodes 100 --no_gui
+```
+
+#### Full PPO Training
+```bash
+# Main assignment grid
+python train.py grid_configs/A2/assignment2_main.npy --agent_type ppo --episodes 200 --no_gui --agent_start_pos 3 9
+```
+
+### **5. Performance Comparison**
 ```bash
 # Compare all agents on same grid
 python train.py grid_configs/A2/assignment2_main.npy --agent_type random --episodes 20 --no_gui
 python train.py grid_configs/A2/assignment2_main.npy --agent_type heuristic --episodes 20 --no_gui  
 python train.py grid_configs/A2/assignment2_main.npy --agent_type dqn --episodes 100 --no_gui
+python train.py grid_configs/A2/assignment2_main.npy --agent_type ppo --episodes 100 --no_gui
 ```
 
-### **5. Visual Testing (with GUI)**
+### **6. Visual Testing (with GUI)**
 ```bash
 # Watch agents learn (slower)
 python train.py grid_configs/A2/simple_restaurant.npy --agent_type heuristic --episodes 5 --fps 10
 python train.py grid_configs/A2/simple_restaurant.npy --agent_type dqn --episodes 20 --fps 10
+python train.py grid_configs/A2/simple_restaurant.npy --agent_type ppo --episodes 20 --fps 10
 ```
 
-### **6. Grid Complexity Testing**
+### **7. Grid Complexity Testing**
 ```bash
-# Easy to hard progression
+# Easy to hard progression DQN
 python train.py grid_configs/A2/open_space.npy --agent_type dqn --episodes 30 --no_gui
 python train.py grid_configs/A2/simple_restaurant.npy --agent_type dqn --episodes 50 --no_gui
 python train.py grid_configs/A2/corridor_test.npy --agent_type dqn --episodes 75 --no_gui
 python train.py grid_configs/A2/maze_challenge.npy --agent_type dqn --episodes 100 --no_gui
 ```
 
+```bash
+# Easy to hard progression PPO
+python train.py grid_configs/A2/open_space.npy --agent_type ppo --episodes 30 --no_gui
+python train.py grid_configs/A2/simple_restaurant.npy --agent_type ppo --episodes 50 --no_gui
+python train.py grid_configs/A2/corridor_test.npy --agent_type ppo --episodes 75 --no_gui
+python train.py grid_configs/A2/maze_challenge.npy --agent_type ppo --episodes 100 --no_gui
+```
+
 ## File Structure
 
 ```
 ├── agents/
-│   ├── base_agent.py            # Enhanced for 10D continuous states
-│   ├── random_agent.py          # Random baseline
-│   ├── heuristic_agent.py       # Intelligent rule-based agent
-│   ├── DQN_agent.py             # DQN implementation
-│   └── DQN_nn.py                # Neural network architecture
+│   ├── base_agent.py          # Enhanced for 10-D continuous states
+│   ├── random_agent.py        # Random baseline
+│   ├── heuristic_agent.py     # Rule-based baseline
+│   ├── DQN_agent.py           # DQN implementation
+│   ├── DQN_nn.py              # Network used by DQN
+│   ├── PPO_agent.py           # Clipped-surrogate PPO implementation
+│   └── PPO_policy.py          # Shared actor-critic network used by PPO
 ├── world/
 │   ├── environment.py          # 10D continuous state implementation
 │   ├── grid.py                 # Grid representation
@@ -143,6 +172,7 @@ python train.py grid_configs/A2/maze_challenge.npy --agent_type dqn --episodes 1
 | `random` | Baseline | Sanity check | ~10% success |
 | `heuristic` | Rule-based | Strong baseline | ~80-90% success |
 | `dqn` | Deep RL | Assignment 2 baseline | ~95-100% success |
+| `ppo` | Deep RL | Assignment 2 main approach | ~95-100% success |
 
 ## Environment Configuration
 
@@ -167,11 +197,17 @@ env = Environment(
 - **Random Agent**: -500 to -800 average reward, 10-20% success rate
 - **Heuristic Agent**: -50 to -150 average reward, 80-95% success rate  
 - **DQN Agent**: -5 to -50 average reward, 95-100% success rate
+- **PPO Agent**: -5 to -50 average reward, 95-100% success rate
 
 ### Training Progress (DQN)
 - **Episodes 0-20**: Learning basic navigation (-500 to -200 reward)
 - **Episodes 20-50**: Improving efficiency (-200 to -100 reward)
 - **Episodes 50+**: Near-optimal performance (-50 to 0 reward)
+
+### Training Progress (PPO)
+- **Episodes 0-20**: Learning basic navigation (-500 to -200 reward)
+- **Episodes 20-100**: Improving efficiency (-200 to -100 reward)
+- **Episodes 100+**: Near-optimal performance (-50 to 0 reward)
 
 ## Output Files
 
