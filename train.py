@@ -10,7 +10,8 @@ try:
     from world import Environment
     from agents.random_agent import RandomAgent
     from agents.heuristic_agent import HeuristicAgent
-    from agents.DQN_agent import DQNAgent  # Updated import
+    from agents.DQN_agent import DQNAgent
+    from agents.PPO_agent import PPOAgent
 except ModuleNotFoundError:
     from os import path
     from os import pardir
@@ -24,6 +25,7 @@ except ModuleNotFoundError:
     from agents.random_agent import RandomAgent
     from agents.heuristic_agent import HeuristicAgent
     from agents.DQN_agent import DQNAgent
+    from agents.PPO_agent import PPOAgent
 
 
 def parse_args():
@@ -41,7 +43,7 @@ def parse_args():
     p.add_argument("--random_seed", type=int, default=0,
                    help="Random seed value for the environment.")
     p.add_argument("--agent_type", type=str, default="heuristic", 
-                   choices=["random", "heuristic", "dqn"],
+                   choices=["random", "heuristic", "dqn", "ppo"],
                    help="Type of agent to train/test.")
     p.add_argument("--state_representation", type=str, default="continuous_vector",
                    choices=["continuous_vector", "discrete"],
@@ -77,8 +79,11 @@ def main(grid_paths: list[Path], no_gui: bool, iters: int, fps: int,
         elif agent_type == "heuristic":
             agent = HeuristicAgent()
         elif agent_type == "dqn":
-            agent = DQNAgent(state_dim=10, action_dim=4)  # Updated for 10D state space
+            agent = DQNAgent(state_dim=10, action_dim=4)
             print("DQN agent initialized for 10D continuous state space")
+        elif agent_type == "ppo":
+            agent = PPOAgent(state_dim=10, action_dim=4)
+            print("PPO agent initialized for 10D continuous state space")
         else:
             raise ValueError(f"Unknown agent type: {agent_type}")
         
@@ -117,11 +122,11 @@ def main(grid_paths: list[Path], no_gui: bool, iters: int, fps: int,
             episode_lengths.append(episode_length)
             
             # Print progress every 20 episodes
-            if episode % 20 == 0:
+            if (episode + 1) % 20 == 0:
                 avg_reward = np.mean(episode_rewards[-20:])
                 avg_length = np.mean(episode_lengths[-20:])
                 success_rate = (success_count / (episode + 1)) * 100
-                print(f"Episode {episode}: Avg Reward = {avg_reward:.2f}, "
+                print(f"Episode {episode + 1}: Avg Reward = {avg_reward:.2f}, "
                       f"Avg Length = {avg_length:.1f}, Success Rate = {success_rate:.1f}%")
 
         # Final statistics (Assignment 1 style)
