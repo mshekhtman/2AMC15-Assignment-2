@@ -1,5 +1,5 @@
 """
-DQN Agent for 10D continuous state space restaurant delivery robot.
+DQN Agent for realistic 8D continuous state space restaurant delivery robot.
 This file contains the complete DQN algorithm implementation.
 """
 import numpy as np
@@ -28,25 +28,25 @@ from agents.DQN_nn import DQNetwork
 
 
 class DQNAgent(BaseAgent):
-    """DQN Agent for 10D continuous state space restaurant delivery."""
+    """DQN Agent for realistic 8D continuous state space restaurant delivery."""
     
     def __init__(self, 
-                 state_dim=10,  # Updated for 10D state space
+                 state_dim=8,  # Updated for realistic 8D state space
                  action_dim=4, 
                  state_type='continuous_vector',
                  gamma=0.99, 
                  lr=1e-3, 
                  batch_size=64, 
-                 buffer_size=50000,  # Reduced for simpler environment
+                 buffer_size=50000,  # Adequate for realistic environment
                  min_replay_size=1000, 
-                 target_update_freq=500,  # More frequent updates for faster learning
+                 target_update_freq=500,  # Frequent updates for exploration learning
                  epsilon_start=1.0,
                  epsilon_min=0.01,  # Lower minimum for better exploitation
                  epsilon_decay=0.995):
-        """Initialize DQN Agent for 10D state space.
+        """Initialize DQN Agent for realistic 8D state space.
         
         Args:
-            state_dim: Dimension of state space (10 for simplified environment)
+            state_dim: Dimension of state space (8 for realistic environment)
             action_dim: Number of actions (4 for movement)
             gamma: Discount factor for future rewards
             lr: Learning rate for neural network
@@ -95,13 +95,14 @@ class DQNAgent(BaseAgent):
         self.episode_count = 0
         self.losses = []
         
-        print(f"DQN Agent initialized with {state_dim}D state space")
+        print(f"DQN Agent initialized with {state_dim}D realistic state space")
+        print(f"State features: position(2) + clearance(4) + mission(2) = {state_dim}D")
     
     def take_training_action(self, state, training=True):
         """Take action using epsilon-greedy policy.
         
         Args:
-            state: Current state (10D vector or compatible format)
+            state: Current state (8D vector or compatible format)
             training: Whether in training mode (affects exploration)
             
         Returns:
@@ -127,7 +128,7 @@ class DQNAgent(BaseAgent):
         """Take action using current policy (for evaluation).
         
         Args:
-            state: Current state (10D vector or compatible format)
+            state: Current state (8D vector or compatible format)
             
         Returns:
             action: Integer action in [0, 3]
@@ -226,7 +227,9 @@ class DQNAgent(BaseAgent):
             'epsilon': self.epsilon,
             'training_steps': self.training_steps,
             'episode_count': self.episode_count,
-            'replay_buffer_size': len(self.replay_buffer)
+            'replay_buffer_size': len(self.replay_buffer),
+            'state_dim': self.state_dim,
+            'action_dim': self.action_dim
         }, filepath)
         print(f"DQN Agent saved to {filepath}")
     
@@ -260,3 +263,25 @@ class DQNAgent(BaseAgent):
             'avg_loss_last_100': np.mean(self.losses[-100:]) if len(self.losses) >= 100 else 0,
             'total_losses_recorded': len(self.losses)
         }
+    
+    def analyze_state(self, state):
+        """Analyze and print state information for debugging."""
+        state = self.preprocess_state(state)
+        state_info = self.get_state_info(state)
+        
+        print(f"=== State Analysis ===")
+        print(f"Position: {state_info['position']}")
+        print(f"Grid Position: {state_info['position_grid']}")
+        print(f"Clear Directions: {state_info['clear_directions']}")
+        print(f"Remaining Targets: {state_info['remaining_targets']:.2f}")
+        print(f"Mission Progress: {state_info['progress']:.2f}")
+        
+        # Get Q-values for current state
+        state_tensor = torch.tensor(state, dtype=torch.float32).unsqueeze(0).to(self.device)
+        with torch.no_grad():
+            q_values = self.q_net(state_tensor).squeeze().cpu().numpy()
+        
+        action_names = ["down", "up", "left", "right"]
+        print(f"Q-values: {dict(zip(action_names, q_values))}")
+        print(f"Best action: {action_names[np.argmax(q_values)]}")
+        print("=" * 20)

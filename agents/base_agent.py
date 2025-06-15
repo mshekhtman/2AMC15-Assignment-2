@@ -1,15 +1,15 @@
-"""Simplified agents/base_agent.py for 10D continuous state space."""
+"""Updated agents/base_agent.py for realistic 8D continuous state space."""
 
 from abc import ABC, abstractmethod
 import numpy as np
 
 
 class BaseAgent(ABC):
-    def __init__(self, state_dim: int = 10, action_dim: int = 4, state_type: str = 'continuous_vector'):
-        """Base agent for simplified continuous state space.
+    def __init__(self, state_dim: int = 8, action_dim: int = 4, state_type: str = 'continuous_vector'):
+        """Base agent for realistic continuous state space.
 
         Args:
-            state_dim: Dimension of the continuous state vector (default 10 for simplified restaurant robot)
+            state_dim: Dimension of the continuous state vector (8 for realistic restaurant robot)
             action_dim: Number of discrete actions (4 for up/down/left/right)
             state_type: Type of state representation ('continuous_vector', 'discrete')
         """
@@ -35,12 +35,11 @@ class BaseAgent(ABC):
                   - np.ndarray of shape (2,) for discrete position states  
                   - tuple (x, y) for discrete position states (backward compatibility)
                   
-                  For simplified restaurant delivery robot with continuous_vector:
+                  For realistic restaurant delivery robot with continuous_vector (8D):
                   state[0-1]: Normalized position (x, y) in [0, 1]
-                  state[2-3]: Direction to nearest target (unit vector)
-                  state[4]: Remaining targets, normalized
-                  state[5-8]: Clear directions (binary: front, left, right, back)
-                  state[9]: Mission progress in [0, 1]
+                  state[2-5]: Clear directions (binary: front, left, right, back)
+                  state[6]: Remaining targets, normalized
+                  state[7]: Mission progress in [0, 1]
 
         Returns:
             action: Discrete action integer in [0, action_dim-1]
@@ -106,19 +105,18 @@ class BaseAgent(ABC):
         """Extract interpretable information from state for debugging."""
         state = self.preprocess_state(state)
         
-        if self.state_type == 'continuous_vector' and len(state) >= 10:
+        if self.state_type == 'continuous_vector' and len(state) >= 8:
             return {
                 'position': (state[0], state[1]),
                 'position_grid': (state[0] * 10, state[1] * 10),
-                'target_direction': (state[2], state[3]),
-                'remaining_targets': state[4],
                 'clear_directions': {
-                    'front': bool(state[5]),
-                    'left': bool(state[6]),
-                    'right': bool(state[7]),
-                    'back': bool(state[8])
+                    'front': bool(state[2]),
+                    'left': bool(state[3]),
+                    'right': bool(state[4]),
+                    'back': bool(state[5])
                 },
-                'progress': state[9]
+                'remaining_targets': state[6],
+                'progress': state[7]
             }
         elif self.state_type == 'discrete':
             return {
