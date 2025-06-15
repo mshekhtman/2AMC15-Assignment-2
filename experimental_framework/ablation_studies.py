@@ -188,9 +188,47 @@ class AblationStudy:
     
     def _create_modified_environment(self, variant_type):
         """Create environment with modified state representation."""
-        # This would require modifying the Environment class to support different state variants
-        # For now, we'll use the standard environment and modify states in the agent
-        return Environment(
+        
+        class ModifiedEnvironment(Environment):
+            def __init__(self, variant_type, *args, **kwargs):
+                super().__init__(*args, **kwargs)
+                self.variant_type = variant_type
+            
+            def get_realistic_delivery_state(self):
+                """Override to return modified state based on variant."""
+                # Get full 8D state
+                full_state = super().get_realistic_delivery_state()
+                
+                # Modify based on variant type
+                if self.variant_type == 'full':
+                    return full_state  # [pos(2) + clearance(4) + mission(2)] = 8D
+                
+                elif self.variant_type == 'no_pos':
+                    # Remove position features [0-1], keep clearance [2-5] + mission [6-7]
+                    return full_state[2:]  # 6D: clearance(4) + mission(2)
+                
+                elif self.variant_type == 'no_clear':
+                    # Remove clearance features [2-5], keep position [0-1] + mission [6-7]
+                    return np.concatenate([full_state[0:2], full_state[6:8]])  # 4D: pos(2) + mission(2)
+                
+                elif self.variant_type == 'no_mission':
+                    # Remove mission features [6-7], keep position [0-1] + clearance [2-5]
+                    return full_state[0:6]  # 6D: pos(2) + clearance(4)
+                
+                elif self.variant_type == 'pos_only':
+                    # Only position features [0-1]
+                    return full_state[0:2]  # 2D: pos(2)
+                
+                elif self.variant_type == 'local_only':
+                    # Only clearance [2-5] + mission [6-7]
+                    return np.concatenate([full_state[2:6], full_state[6:8]])  # 6D: clearance(4) + mission(2)
+                
+                else:
+                    return full_state
+        
+        # Create modified environment
+        return ModifiedEnvironment(
+            variant_type,
             grid_fp=self.base_config['grid_path'],
             no_gui=True,
             sigma=self.base_config['sigma'],
@@ -202,15 +240,15 @@ class AblationStudy:
     def _get_state_dim(self, variant_type):
         """Get state dimension for different variants."""
         state_dims = {
-            'full': 8,
-            'no_pos': 6,      # Remove position (2 features)
-            'no_clear': 4,    # Remove clearance (4 features)
-            'no_mission': 6,  # Remove mission (2 features)
-            'pos_only': 2,    # Only position
-            'local_only': 6   # Only clearance + mission
+            'full': 8,        # pos(2) + clearance(4) + mission(2)
+            'no_pos': 6,      # clearance(4) + mission(2) 
+            'no_clear': 4,    # pos(2) + mission(2)
+            'no_mission': 6,  # pos(2) + clearance(4)
+            'pos_only': 2,    # pos(2)
+            'local_only': 6   # clearance(4) + mission(2)
         }
         return state_dims.get(variant_type, 8)
-    
+        
     def _create_custom_architecture_agent(self, arch_config):
         """Create agent with custom network architecture."""
         # Create standard DQN agent

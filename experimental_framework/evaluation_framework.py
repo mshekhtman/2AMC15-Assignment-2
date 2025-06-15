@@ -1,6 +1,8 @@
 """
 Comprehensive Evaluation Framework for Assignment 2.
 Implements RL evaluation metrics from literature and creates detailed analysis.
+
+FIXED: JSON serialization error with boolean values
 """
 import numpy as np
 import matplotlib.pyplot as plt
@@ -359,18 +361,18 @@ class ComprehensiveEvaluator:
                     )
                     
                     pairwise_tests[f"{agent1}_vs_{agent2}"] = {
-                        'statistic': statistic,
-                        'p_value': p_value,
-                        'significant': p_value < 0.05
+                        'statistic': float(statistic),  # Convert to Python float
+                        'p_value': float(p_value),      # Convert to Python float
+                        'significant': bool(p_value < 0.05)  # Convert to Python bool
                     }
             
             # ANOVA test if more than 2 agents
             if len(agent_names) > 2:
                 f_statistic, anova_p_value = stats.f_oneway(*agent_values.values())
                 metric_results['anova'] = {
-                    'f_statistic': f_statistic,
-                    'p_value': anova_p_value,
-                    'significant': anova_p_value < 0.05
+                    'f_statistic': float(f_statistic),
+                    'p_value': float(anova_p_value),
+                    'significant': bool(anova_p_value < 0.05)
                 }
             
             metric_results['pairwise_tests'] = pairwise_tests
@@ -541,6 +543,9 @@ class ComprehensiveEvaluator:
                     metric_p_values.append(1.0)
             p_values_matrix.append(metric_p_values)
         
+        if not pairwise_comparisons:  # Skip if no pairwise comparisons
+            return
+        
         # Create heatmap
         fig, ax = plt.subplots(figsize=(12, 8))
         
@@ -662,18 +667,33 @@ class ComprehensiveEvaluator:
     def _save_comprehensive_results(self, comparison_results, statistical_analysis):
         """Save comprehensive results to files."""
         
-        # Convert numpy types for JSON serialization
+        # Enhanced conversion function for JSON serialization
         def convert_for_json(obj):
-            if isinstance(obj, np.ndarray):
-                return obj.tolist()
-            elif isinstance(obj, (np.integer, np.floating)):
+            """Recursively convert objects to JSON serializable types."""
+            if isinstance(obj, (np.integer, np.int64, np.int32, np.int16, np.int8)):
+                return int(obj)
+            elif isinstance(obj, (np.floating, np.float64, np.float32, np.float16)):
                 return float(obj)
+            elif isinstance(obj, np.ndarray):
+                return obj.tolist()
+            elif isinstance(obj, (np.bool_, bool)):  # Handle both numpy and Python booleans
+                return bool(obj)
             elif isinstance(obj, dict):
                 return {k: convert_for_json(v) for k, v in obj.items()}
-            elif isinstance(obj, list):
+            elif isinstance(obj, (list, tuple)):
                 return [convert_for_json(item) for item in obj]
-            else:
+            elif obj is None:
+                return None
+            elif isinstance(obj, str):
                 return obj
+            elif hasattr(obj, '__dict__'):
+                return convert_for_json(obj.__dict__)
+            else:
+                # For any other type, try to convert to string as fallback
+                try:
+                    return str(obj)
+                except:
+                    return None
         
         # Save comparison results
         with open(self.experiment_dir / "comprehensive_results.json", 'w') as f:
