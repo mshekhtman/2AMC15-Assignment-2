@@ -10,7 +10,6 @@
 # Icon must end with two \r
 Icon
 
-
 # Thumbnails
 ._*
 
@@ -137,7 +136,6 @@ __pycache__/
 **/__pycache__
 **/*.pyc
 
-
 # C extensions
 *.so
 
@@ -237,3 +235,50 @@ venv.bak/
 
 # mypy
 .mypy_cache/
+
+#######################
+##   PROJECT SPECIFIC ##
+#######################
+
+# Training results and outputs
+results/
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.svg
+
+# Trained model files
+*.pth
+*.pt
+*.pkl
+*.pickle
+*.h5
+*.hdf5
+*.ckpt
+*.model
+
+# Experiment logs and data
+logs/
+experiments/
+wandb/
+tensorboard/
+mlruns/
+
+# Generated grid configurations (optional - comment out if you want to track custom grids)
+# grid_configs/custom_*
+# grid_configs/temp_*
+
+# Temporary files
+temp/
+tmp/
+*.tmp
+*.temp
+
+# OS generated files
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Desktop.ini
