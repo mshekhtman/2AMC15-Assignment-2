@@ -10,7 +10,7 @@ import json
 # Import all experimental frameworks
 try:
     from hyperparameter_tuner import HyperparameterTuner
-    from algorithm_comparison import AlgorithmComparison
+    from algorithm_comparison import AlgorithmComparison, DoubleDQNAgent, DuelingDQNAgent
     from ablation_studies import AblationStudy
     from evaluation_framework import ComprehensiveEvaluator
     from agents.DQN_agent import DQNAgent
@@ -26,7 +26,6 @@ except ModuleNotFoundError:
     from agents.DQN_agent import DQNAgent
     from agents.random_agent import RandomAgent
     from agents.heuristic_agent import HeuristicAgent
-
 
 class MasterExperimentRunner:
     """Coordinates all experimental phases for Assignment 2."""
