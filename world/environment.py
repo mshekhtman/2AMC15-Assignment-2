@@ -1,10 +1,10 @@
 """
-Simplified world/environment.py with reduced complexity
-Key simplifications:
-- 10D state vector (down from 15D)
-- Removed distance to target (discouraged by course staff)
-- Simplified reward function
-- Reduced movement tracking complexity
+Simplified world/environment.py with realistic 8D state space
+Key changes:
+- Removed unrealistic direction to nearest target (vectors 2-3)
+- 8D state vector instead of 10D
+- More realistic robot sensor simulation
+- Cleaner state representation focused on local perception
 """
 import random
 import datetime
@@ -49,7 +49,7 @@ class Environment:
                  random_seed: int | float | str | bytes | bytearray | None = 0,
                  state_representation: str = 'continuous_vector'):
         
-        """Creates the Grid Environment with simplified continuous state space.
+        """Creates the Grid Environment with realistic 8D continuous state space.
 
         Args:
             grid_fp: Path to the grid file to use.
@@ -59,7 +59,7 @@ class Environment:
             reward_fn: Custom reward function to use.
             target_fps: How fast the simulation should run in GUI.
             random_seed: Random seed for environment.
-            state_representation: 'continuous_vector' for 10D vector, 'discrete' for backward compatibility.
+            state_representation: 'continuous_vector' for 8D vector, 'discrete' for backward compatibility.
         """
         random.seed(random_seed)
 
@@ -161,7 +161,7 @@ class Environment:
 
         # Return appropriate state representation
         if self.state_representation == 'continuous_vector':
-            return self.get_simplified_delivery_state()
+            return self.get_realistic_delivery_state()
         else:
             return np.array(self.agent_pos, dtype=np.float32)
 
@@ -233,7 +233,7 @@ class Environment:
 
         # Return appropriate state representation
         if self.state_representation == 'continuous_vector':
-            next_state = self.get_simplified_delivery_state()
+            next_state = self.get_realistic_delivery_state()
         else:
             next_state = np.array(self.agent_pos, dtype=np.float32)
 
@@ -246,87 +246,63 @@ class Environment:
 
         return next_state, reward, self.terminal_state, self.info
 
-    def get_simplified_delivery_state(self) -> np.ndarray:
-        """Generate simplified 10D continuous state vector.
+    def get_realistic_delivery_state(self) -> np.ndarray:
+        """Generate realistic 8D continuous state vector.
+        
+        This represents what a real delivery robot could actually sense:
+        - Its own position (from GPS/odometry)
+        - Local obstacle detection (from sensors like lidar/cameras)
+        - Mission status (from internal tracking)
         
         Returns:
-            10-dimensional state vector:
+            8-dimensional state vector:
             [0-1]: Normalized position (x, y)
-            [2-3]: Direction to nearest target (unit vector)
-            [4]: Remaining targets (normalized)
-            [5-8]: Clear directions (front, left, right, back)
-            [9]: Mission progress
+            [2-5]: Clear directions (front, left, right, back) - obstacle detection
+            [6]: Remaining targets (normalized) - mission tracking
+            [7]: Mission progress
         """
         
-        # 1. Normalized position
+        # 1. Normalized position (realistic - robot knows its position)
         norm_x = self.agent_pos[0] / self.grid.shape[0]
         norm_y = self.agent_pos[1] / self.grid.shape[1]
         
-        # 2. Direction to nearest target (NO DISTANCE - removed per course guidance)
-        target_positions = np.where(self.grid == 3)
-        if len(target_positions[0]) > 0:
-            targets = list(zip(target_positions[0], target_positions[1]))
-            
-            # Find nearest target for direction only
-            distances = [np.sqrt((self.agent_pos[0] - tx)**2 + (self.agent_pos[1] - ty)**2) 
-                        for tx, ty in targets]
-            nearest_target = targets[np.argmin(distances)]
-            
-            # Direction vector to nearest target (unit vector)
-            dx = nearest_target[0] - self.agent_pos[0]
-            dy = nearest_target[1] - self.agent_pos[1]
-            dist = np.sqrt(dx**2 + dy**2)
-            if dist > 0:
-                target_dir_x, target_dir_y = dx/dist, dy/dist
-            else:
-                target_dir_x, target_dir_y = 0, 0
-            
-            # Remaining targets (normalized)
-            remaining_targets = len(targets) / max(1, self.initial_target_count)
-        else:
-            target_dir_x, target_dir_y = 0, 0
-            remaining_targets = 0
-        
-        # 3. Local environment (3x3 grid around agent - simplified)
+        # 2. Local environment sensing (realistic - robot has sensors)
         local_view = self._get_local_view_simple()
         
-        # Check specific directions for obstacles
+        # Check specific directions for obstacles (what sensors would detect)
         front_clear = float(local_view[0, 1] == 0)  # Up direction
         left_clear = float(local_view[1, 0] == 0)   # Left direction
         right_clear = float(local_view[1, 2] == 0)  # Right direction
         back_clear = float(local_view[2, 1] == 0)   # Down direction
         
-        # 4. Mission progress
+        # 3. Mission tracking (realistic - robot tracks its assigned deliveries)
+        target_positions = np.where(self.grid == 3)
         if self.initial_target_count > 0:
             current_targets = len(target_positions[0]) if len(target_positions[0]) > 0 else 0
-            progress = 1.0 - (current_targets / self.initial_target_count)
+            remaining_targets_norm = current_targets / self.initial_target_count
+            progress = 1.0 - remaining_targets_norm
         else:
+            remaining_targets_norm = 0
             progress = 1.0
         
-        # Simplified 10D state vector
+        # Realistic 8D state vector
         state_vector = np.array([
-            # Position (2 features)
+            # Position (2 features) - GPS/odometry
             norm_x, norm_y,
             
-            # Target direction only (2 features) - NO DISTANCE
-            target_dir_x, target_dir_y,
-            
-            # Target count (1 feature)
-            remaining_targets,
-            
-            # Local environment (4 features)
+            # Local obstacle detection (4 features) - sensor data
             front_clear, left_clear, right_clear, back_clear,
             
-            # Mission status (1 feature)
-            progress
+            # Mission status (2 features) - internal tracking
+            remaining_targets_norm, progress
         ], dtype=np.float32)
         
         return state_vector
 
     def _get_local_view_simple(self) -> np.ndarray:
-        """Get simplified 3x3 local view around agent."""
+        """Get simplified 3x3 local view around agent (simulates sensors)."""
         x, y = self.agent_pos
-        local_view = np.ones((3, 3))  # Default to obstacles
+        local_view = np.ones((3, 3))  # Default to obstacles (conservative sensing)
         
         for i in range(3):
             for j in range(3):
