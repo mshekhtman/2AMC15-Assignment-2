@@ -42,7 +42,8 @@ class DQNAgent(BaseAgent):
                  target_update_freq=500,  # Frequent updates for exploration learning
                  epsilon_start=1.0,
                  epsilon_min=0.01,  # Lower minimum for better exploitation
-                 epsilon_decay=0.995):
+                 epsilon_decay=0.995,
+                 verbose=True):  # Add verbose parameter
         """Initialize DQN Agent for realistic 8D state space.
         
         Args:
@@ -57,6 +58,7 @@ class DQNAgent(BaseAgent):
             epsilon_start: Initial exploration rate
             epsilon_min: Minimum exploration rate
             epsilon_decay: Decay rate for exploration
+            verbose: Whether to print training progress
         """
         super().__init__(state_dim, action_dim, state_type)
         
@@ -66,6 +68,7 @@ class DQNAgent(BaseAgent):
         self.batch_size = batch_size
         self.min_replay_size = min_replay_size
         self.target_update_freq = target_update_freq
+        self.verbose = verbose
         
         # Experience replay buffer
         self.buffer_size = buffer_size
@@ -73,7 +76,8 @@ class DQNAgent(BaseAgent):
         
         # Device configuration
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        print(f"DQN Agent using device: {self.device}")
+        if self.verbose:
+            print(f"DQN Agent using device: {self.device}")
         
         # Neural networks
         self.q_net = DQNetwork(state_dim, action_dim).to(self.device)
@@ -95,8 +99,9 @@ class DQNAgent(BaseAgent):
         self.episode_count = 0
         self.losses = []
         
-        print(f"DQN Agent initialized with {state_dim}D realistic state space")
-        print(f"State features: position(2) + clearance(4) + mission(2) = {state_dim}D")
+        if self.verbose:
+            print(f"DQN Agent initialized with {state_dim}D realistic state space")
+            print(f"State features: position(2) + clearance(4) + mission(2) = {state_dim}D")
     
     def take_training_action(self, state, training=True):
         """Take action using epsilon-greedy policy.
@@ -164,7 +169,9 @@ class DQNAgent(BaseAgent):
         self.training_steps += 1
         if self.training_steps % self.target_update_freq == 0:
             self.target_q_net.load_state_dict(self.q_net.state_dict())
-            print(f"Target network updated at step {self.training_steps}")
+            # Reduced verbosity: only print every 5 target updates and only if verbose
+            if self.verbose and self.training_steps % (self.target_update_freq * 5) == 0:
+                print(f"Target network updated at step {self.training_steps}")
         
         # Decay epsilon at episode end
         if done:
@@ -172,8 +179,8 @@ class DQNAgent(BaseAgent):
             if self.epsilon > self.epsilon_min:
                 self.epsilon *= self.epsilon_decay
                 
-            # Print progress occasionally
-            if self.episode_count % 50 == 0:
+            # Print progress occasionally and only if verbose
+            if self.verbose and self.episode_count % 25 == 0:
                 avg_loss = np.mean(self.losses[-50:]) if self.losses else 0
                 print(f"Episode {self.episode_count}: epsilon={self.epsilon:.3f}, "
                       f"avg_loss={avg_loss:.4f}, buffer_size={len(self.replay_buffer)}")
@@ -231,7 +238,8 @@ class DQNAgent(BaseAgent):
             'state_dim': self.state_dim,
             'action_dim': self.action_dim
         }, filepath)
-        print(f"DQN Agent saved to {filepath}")
+        if self.verbose:
+            print(f"DQN Agent saved to {filepath}")
     
     def load_agent(self, filepath: str):
         """Load DQN agent state."""
@@ -245,13 +253,16 @@ class DQNAgent(BaseAgent):
             self.training_steps = checkpoint.get('training_steps', 0)
             self.episode_count = checkpoint.get('episode_count', 0)
             
-            print(f"DQN Agent loaded from {filepath}")
-            print(f"Epsilon: {self.epsilon:.3f}, Episodes: {self.episode_count}, Steps: {self.training_steps}")
+            if self.verbose:
+                print(f"DQN Agent loaded from {filepath}")
+                print(f"Epsilon: {self.epsilon:.3f}, Episodes: {self.episode_count}, Steps: {self.training_steps}")
             
         except FileNotFoundError:
-            print(f"No saved DQN agent found at {filepath}")
+            if self.verbose:
+                print(f"No saved DQN agent found at {filepath}")
         except Exception as e:
-            print(f"Error loading DQN agent: {e}")
+            if self.verbose:
+                print(f"Error loading DQN agent: {e}")
     
     def get_training_stats(self) -> dict:
         """Get training statistics for monitoring."""
@@ -269,19 +280,20 @@ class DQNAgent(BaseAgent):
         state = self.preprocess_state(state)
         state_info = self.get_state_info(state)
         
-        print(f"=== State Analysis ===")
-        print(f"Position: {state_info['position']}")
-        print(f"Grid Position: {state_info['position_grid']}")
-        print(f"Clear Directions: {state_info['clear_directions']}")
-        print(f"Remaining Targets: {state_info['remaining_targets']:.2f}")
-        print(f"Mission Progress: {state_info['progress']:.2f}")
-        
-        # Get Q-values for current state
-        state_tensor = torch.tensor(state, dtype=torch.float32).unsqueeze(0).to(self.device)
-        with torch.no_grad():
-            q_values = self.q_net(state_tensor).squeeze().cpu().numpy()
-        
-        action_names = ["down", "up", "left", "right"]
-        print(f"Q-values: {dict(zip(action_names, q_values))}")
-        print(f"Best action: {action_names[np.argmax(q_values)]}")
-        print("=" * 20)
+        if self.verbose:
+            print(f"=== State Analysis ===")
+            print(f"Position: {state_info['position']}")
+            print(f"Grid Position: {state_info['position_grid']}")
+            print(f"Clear Directions: {state_info['clear_directions']}")
+            print(f"Remaining Targets: {state_info['remaining_targets']:.2f}")
+            print(f"Mission Progress: {state_info['progress']:.2f}")
+            
+            # Get Q-values for current state
+            state_tensor = torch.tensor(state, dtype=torch.float32).unsqueeze(0).to(self.device)
+            with torch.no_grad():
+                q_values = self.q_net(state_tensor).squeeze().cpu().numpy()
+            
+            action_names = ["down", "up", "left", "right"]
+            print(f"Q-values: {dict(zip(action_names, q_values))}")
+            print(f"Best action: {action_names[np.argmax(q_values)]}")
+            print("=" * 20)

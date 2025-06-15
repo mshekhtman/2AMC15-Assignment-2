@@ -33,28 +33,32 @@ class DoubleDQNAgent(BaseAgent):
     def __init__(self, state_dim=8, action_dim=4, **kwargs):
         super().__init__(state_dim, action_dim, 'continuous_vector')
         
-        # Use same hyperparameters as regular DQN for fair comparison
-        self.gamma = kwargs.get('gamma', 0.99)
-        self.lr = kwargs.get('lr', 1e-3)
-        self.batch_size = kwargs.get('batch_size', 64)
-        self.buffer_size = kwargs.get('buffer_size', 50000)
-        self.min_replay_size = kwargs.get('min_replay_size', 1000)
-        self.target_update_freq = kwargs.get('target_update_freq', 500)
-        self.epsilon = kwargs.get('epsilon_start', 1.0)
-        self.epsilon_min = kwargs.get('epsilon_min', 0.01)
-        self.epsilon_decay = kwargs.get('epsilon_decay', 0.995)
+        # Convert NumPy types to native Python types
+        def convert_param(value):
+            if isinstance(value, (np.integer, np.floating)):
+                return float(value) if isinstance(value, np.floating) else int(value)
+            return value
         
-        # Neural networks
+        # Use converted parameters
+        self.gamma = convert_param(kwargs.get('gamma', 0.99))
+        self.lr = convert_param(kwargs.get('lr', 1e-3))
+        self.batch_size = convert_param(kwargs.get('batch_size', 64))
+        self.buffer_size = convert_param(kwargs.get('buffer_size', 50000))
+        self.min_replay_size = convert_param(kwargs.get('min_replay_size', 1000))
+        self.target_update_freq = convert_param(kwargs.get('target_update_freq', 500))
+        self.epsilon = convert_param(kwargs.get('epsilon_start', 1.0))
+        self.epsilon_min = convert_param(kwargs.get('epsilon_min', 0.01))
+        self.epsilon_decay = convert_param(kwargs.get('epsilon_decay', 0.995))
+        
+        # Rest of initialization...
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.q_net = DQNetwork(state_dim, action_dim).to(self.device)
         self.target_q_net = DQNetwork(state_dim, action_dim).to(self.device)
         self.target_q_net.load_state_dict(self.q_net.state_dict())
         
-        # Experience replay
         self.replay_buffer = deque(maxlen=self.buffer_size)
         self.optimizer = optim.Adam(self.q_net.parameters(), lr=self.lr)
         
-        # Training tracking
         self.training_steps = 0
         self.episode_count = 0
         self.losses = []
@@ -131,28 +135,32 @@ class DuelingDQNAgent(BaseAgent):
     def __init__(self, state_dim=8, action_dim=4, **kwargs):
         super().__init__(state_dim, action_dim, 'continuous_vector')
         
-        # Use same hyperparameters as regular DQN
-        self.gamma = kwargs.get('gamma', 0.99)
-        self.lr = kwargs.get('lr', 1e-3)
-        self.batch_size = kwargs.get('batch_size', 64)
-        self.buffer_size = kwargs.get('buffer_size', 50000)
-        self.min_replay_size = kwargs.get('min_replay_size', 1000)
-        self.target_update_freq = kwargs.get('target_update_freq', 500)
-        self.epsilon = kwargs.get('epsilon_start', 1.0)
-        self.epsilon_min = kwargs.get('epsilon_min', 0.01)
-        self.epsilon_decay = kwargs.get('epsilon_decay', 0.995)
+        # Convert NumPy types to native Python types
+        def convert_param(value):
+            if isinstance(value, (np.integer, np.floating)):
+                return float(value) if isinstance(value, np.floating) else int(value)
+            return value
         
-        # Dueling neural networks
+        # Use converted parameters
+        self.gamma = convert_param(kwargs.get('gamma', 0.99))
+        self.lr = convert_param(kwargs.get('lr', 1e-3))
+        self.batch_size = convert_param(kwargs.get('batch_size', 64))
+        self.buffer_size = convert_param(kwargs.get('buffer_size', 50000))
+        self.min_replay_size = convert_param(kwargs.get('min_replay_size', 1000))
+        self.target_update_freq = convert_param(kwargs.get('target_update_freq', 500))
+        self.epsilon = convert_param(kwargs.get('epsilon_start', 1.0))
+        self.epsilon_min = convert_param(kwargs.get('epsilon_min', 0.01))
+        self.epsilon_decay = convert_param(kwargs.get('epsilon_decay', 0.995))
+        
+        # Rest of initialization...
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.q_net = DuelingDQNetwork(state_dim, action_dim).to(self.device)
         self.target_q_net = DuelingDQNetwork(state_dim, action_dim).to(self.device)
         self.target_q_net.load_state_dict(self.q_net.state_dict())
         
-        # Experience replay
         self.replay_buffer = deque(maxlen=self.buffer_size)
         self.optimizer = optim.Adam(self.q_net.parameters(), lr=self.lr)
         
-        # Training tracking
         self.training_steps = 0
         self.episode_count = 0
         self.losses = []

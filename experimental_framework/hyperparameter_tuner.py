@@ -9,6 +9,7 @@ from pathlib import Path
 from datetime import datetime
 import matplotlib.pyplot as plt
 import pandas as pd
+import torch
 
 try:
     from world import Environment
@@ -88,25 +89,36 @@ class HyperparameterTuner:
         print(f"\n=== Experiment {experiment_id} ===")
         print(f"Config: {config}")
         
-        # Create agent with specific hyperparameters
+        # Convert NumPy types to native Python types
+        python_config = {}
+        for key, value in config.items():
+            if isinstance(value, (np.integer, np.floating)):
+                python_config[key] = float(value) if isinstance(value, np.floating) else int(value)
+            else:
+                python_config[key] = value
+        
+        # Create agent with specific hyperparameters using converted config
         agent = DQNAgent(
             state_dim=8,
             action_dim=4,
-            lr=config['lr'],
-            batch_size=config['batch_size'],
-            buffer_size=config['buffer_size'],
-            target_update_freq=config['target_update_freq'],
-            epsilon_decay=config['epsilon_decay'],
-            epsilon_min=config['epsilon_min'],
-            gamma=config['gamma']
+            lr=python_config['lr'],
+            batch_size=python_config['batch_size'],
+            buffer_size=python_config['buffer_size'],
+            target_update_freq=python_config['target_update_freq'],
+            epsilon_decay=python_config['epsilon_decay'],
+            epsilon_min=python_config['epsilon_min'],
+            gamma=python_config['gamma'],
+            verbose=False  # Reduce verbosity during hyperparameter search
         )
         
         # Update network architecture if specified
-        if 'hidden_dim' in config:
+        if 'hidden_dim' in python_config:
             from agents.DQN_nn import DQNetwork
-            agent.q_net = DQNetwork(8, 4, config['hidden_dim']).to(agent.device)
-            agent.target_q_net = DQNetwork(8, 4, config['hidden_dim']).to(agent.device)
+            agent.q_net = DQNetwork(8, 4, python_config['hidden_dim']).to(agent.device)
+            agent.target_q_net = DQNetwork(8, 4, python_config['hidden_dim']).to(agent.device)
             agent.target_q_net.load_state_dict(agent.q_net.state_dict())
+            # Update optimizer with new network
+            agent.optimizer = torch.optim.Adam(agent.q_net.parameters(), lr=agent.lr)
         
         # Set up environment
         env = Environment(
@@ -143,11 +155,17 @@ class HyperparameterTuner:
             if episode % 20 == 0 and episode > 0:
                 eval_reward = self._evaluate_agent(env, agent)
                 evaluation_rewards.append((episode, eval_reward))
+            
+            # Progress indicator
+            if episode % 10 == 0:
+                print(f"  Episode {episode}/{episodes} completed (reward: {episode_reward:.1f})")
         
         # Calculate metrics
-        results = self._calculate_metrics(episode_rewards, evaluation_rewards, config)
-        results['experiment_id'] = experiment_id
-        results['config'] = config
+        results = self._calculate_metrics(episode_rewards, evaluation_rewards, python_config)
+        results['experiment_id'] = int(experiment_id)  # Ensure it's int, not numpy type
+        results['config'] = python_config  # Use clean config
+        
+        print(f"Experiment {experiment_id} completed: Mean reward = {results['mean_reward']:.2f}")
         
         return results
     
@@ -193,18 +211,19 @@ class HyperparameterTuner:
             final_eval_performance = eval_rewards[-1] if eval_rewards else 0
         else:
             final_eval_performance = 0
-            
+        
+        # Convert all metrics to native Python types (fix for JSON serialization)
         return {
-            'mean_reward': np.mean(episode_rewards),
-            'std_reward': np.std(episode_rewards),
-            'early_performance': early_performance,
-            'late_performance': late_performance,
-            'improvement': improvement,
-            'variance': variance,
-            'convergence_episode': convergence_episode,
-            'final_eval_performance': final_eval_performance,
-            'best_episode_reward': np.max(episode_rewards),
-            'worst_episode_reward': np.min(episode_rewards)
+            'mean_reward': float(np.mean(episode_rewards)),
+            'std_reward': float(np.std(episode_rewards)),
+            'early_performance': float(early_performance),
+            'late_performance': float(late_performance),
+            'improvement': float(improvement),
+            'variance': float(variance),
+            'convergence_episode': int(convergence_episode),
+            'final_eval_performance': float(final_eval_performance),
+            'best_episode_reward': float(np.max(episode_rewards)),
+            'worst_episode_reward': float(np.min(episode_rewards))
         }
     
     def _find_convergence_point(self, moving_avg, threshold=50):
@@ -235,6 +254,8 @@ class HyperparameterTuner:
                 
             except Exception as e:
                 print(f"Experiment {i} failed: {e}")
+                import traceback
+                traceback.print_exc()
                 continue
         
         # Analyze and save final results
@@ -242,32 +263,50 @@ class HyperparameterTuner:
         return self.results
     
     def _save_results(self):
-        """Save results to JSON file."""
+        """Save results to JSON file with proper type conversion."""
         results_file = self.experiment_dir / "hyperparameter_results.json"
         
-        # Convert numpy types to JSON serializable
-        serializable_results = []
-        for result in self.results:
-            serializable_result = {}
-            for key, value in result.items():
-                if isinstance(value, (np.integer, np.floating)):
-                    serializable_result[key] = float(value)
-                elif isinstance(value, np.ndarray):
-                    serializable_result[key] = value.tolist()
-                else:
-                    serializable_result[key] = value
-            serializable_results.append(serializable_result)
+        # Convert numpy types to JSON serializable - comprehensive conversion
+        def convert_for_json(obj):
+            """Recursively convert numpy types to JSON serializable types."""
+            if isinstance(obj, (np.integer, np.int64, np.int32, np.int16, np.int8)):
+                return int(obj)
+            elif isinstance(obj, (np.floating, np.float64, np.float32, np.float16)):
+                return float(obj)
+            elif isinstance(obj, np.ndarray):
+                return obj.tolist()
+            elif isinstance(obj, dict):
+                return {key: convert_for_json(value) for key, value in obj.items()}
+            elif isinstance(obj, list):
+                return [convert_for_json(item) for item in obj]
+            elif isinstance(obj, tuple):
+                return tuple(convert_for_json(item) for item in obj)
+            else:
+                return obj
+        
+        # Convert all results
+        serializable_results = [convert_for_json(result) for result in self.results]
         
         with open(results_file, 'w') as f:
             json.dump(serializable_results, f, indent=2)
+        
+        print(f"Saved {len(serializable_results)} results to {results_file}")
     
     def _analyze_results(self):
         """Analyze hyperparameter sweep results."""
         if not self.results:
-            return
-            
-        # Convert to DataFrame for analysis
-        df = pd.DataFrame(self.results)
+         return
+    
+        # Convert to DataFrame and extract config parameters as separate columns
+        df_data = []
+        for result in self.results:
+            # Flatten the config into the main result dict
+            flattened_result = result.copy()
+            if 'config' in result:
+                flattened_result.update(result['config'])
+            df_data.append(flattened_result)
+        
+        df = pd.DataFrame(df_data)
         
         # Find best configurations
         best_configs = {
@@ -280,8 +319,15 @@ class HyperparameterTuner:
         
         # Save analysis
         analysis_file = self.experiment_dir / "best_configurations.json"
+        
+        # Convert best configs to JSON serializable format
+        serializable_best_configs = {}
+        for key, config in best_configs.items():
+            serializable_best_configs[key] = {k: float(v) if isinstance(v, (np.integer, np.floating)) else v 
+                                            for k, v in config.to_dict().items()}
+        
         with open(analysis_file, 'w') as f:
-            json.dump({k: v.to_dict() for k, v in best_configs.items()}, f, indent=2, default=str)
+            json.dump(serializable_best_configs, f, indent=2, default=str)
         
         # Create visualizations
         self._create_hyperparameter_plots(df)
@@ -292,59 +338,103 @@ class HyperparameterTuner:
         print(f"Best improvement: {df['improvement'].max():.2f}")
         print(f"Best stability (low variance): {df['variance'].min():.2f}")
         
+        # Print best configuration
+        best_idx = df['mean_reward'].idxmax()
+        best_config = df.loc[best_idx]
+        print(f"\nBest Configuration (Mean Reward: {best_config['mean_reward']:.2f}):")
+        hyperparams = ['lr', 'batch_size', 'target_update_freq', 'epsilon_decay', 'gamma', 'hidden_dim']
+        for param in hyperparams:
+            if param in best_config:
+                print(f"  {param}: {best_config[param]}")
+        
         return best_configs
     
     def _create_hyperparameter_plots(self, df):
         """Create visualization plots for hyperparameter analysis."""
+        # Check which hyperparameters are available in the dataframe
+        hyperparams = ['lr', 'batch_size', 'target_update_freq', 'epsilon_decay', 'gamma', 'hidden_dim']
+        available_hyperparams = [param for param in hyperparams if param in df.columns]
+        
+        if not available_hyperparams:
+            print("Warning: No hyperparameter columns found for plotting")
+            return
+        
         # Performance vs hyperparameters
-        fig, axes = plt.subplots(2, 3, figsize=(18, 12))
+        n_params = len(available_hyperparams)
+        n_cols = 3
+        n_rows = (n_params + n_cols - 1) // n_cols  # Ceiling division
+        
+        fig, axes = plt.subplots(n_rows, n_cols, figsize=(18, 6 * n_rows))
         fig.suptitle('Hyperparameter Analysis', fontsize=16)
         
-        hyperparams = ['lr', 'batch_size', 'target_update_freq', 'epsilon_decay', 'gamma', 'hidden_dim']
+        # Flatten axes for easier indexing
+        if n_rows == 1:
+            axes = [axes] if n_cols == 1 else axes
+        else:
+            axes = axes.flatten()
         
-        for i, param in enumerate(hyperparams):
-            if i >= 6:
-                break
+        for i, param in enumerate(available_hyperparams):
+            ax = axes[i]
+            
+            try:
+                # Group by hyperparameter value and plot mean performance
+                grouped = df.groupby(param)['mean_reward'].agg(['mean', 'std'])
                 
-            ax = axes[i//3, i%3]
-            
-            # Group by hyperparameter value and plot mean performance
-            grouped = df.groupby(param)['mean_reward'].agg(['mean', 'std'])
-            
-            x_values = list(grouped.index)
-            y_values = grouped['mean'].values
-            y_errors = grouped['std'].values
-            
-            ax.errorbar(x_values, y_values, yerr=y_errors, marker='o', capsize=5)
-            ax.set_xlabel(param)
-            ax.set_ylabel('Mean Reward')
-            ax.set_title(f'Performance vs {param}')
-            ax.grid(True, alpha=0.3)
+                x_values = list(grouped.index)
+                y_values = grouped['mean'].values
+                y_errors = grouped['std'].values
+                
+                ax.errorbar(x_values, y_values, yerr=y_errors, marker='o', capsize=5)
+                ax.set_xlabel(param)
+                ax.set_ylabel('Mean Reward')
+                ax.set_title(f'Performance vs {param}')
+                ax.grid(True, alpha=0.3)
+            except Exception as e:
+                ax.text(0.5, 0.5, f'Error plotting {param}:\n{str(e)}', 
+                    ha='center', va='center', transform=ax.transAxes)
+                ax.set_title(f'Error: {param}')
+        
+        # Hide unused subplots
+        for i in range(len(available_hyperparams), len(axes)):
+            axes[i].set_visible(False)
         
         plt.tight_layout()
         plt.savefig(self.experiment_dir / "hyperparameter_analysis.png", dpi=150, bbox_inches='tight')
         plt.close()
         
-        # Correlation matrix
-        numeric_cols = ['lr', 'batch_size', 'target_update_freq', 'epsilon_decay', 'gamma', 'hidden_dim', 'mean_reward']
-        correlation_matrix = df[numeric_cols].corr()
+        # Correlation matrix (only if we have multiple hyperparameters)
+        if len(available_hyperparams) > 1:
+            try:
+                numeric_cols = available_hyperparams + ['mean_reward']
+                # Only include columns that actually exist and are numeric
+                valid_cols = [col for col in numeric_cols if col in df.columns and pd.api.types.is_numeric_dtype(df[col])]
+                
+                if len(valid_cols) > 1:
+                    correlation_matrix = df[valid_cols].corr()
+                    
+                    plt.figure(figsize=(10, 8))
+                    plt.imshow(correlation_matrix, cmap='coolwarm', aspect='auto')
+                    plt.colorbar()
+                    plt.xticks(range(len(valid_cols)), valid_cols, rotation=45)
+                    plt.yticks(range(len(valid_cols)), valid_cols)
+                    plt.title('Hyperparameter Correlation Matrix')
+                    
+                    # Add correlation values
+                    for i in range(len(valid_cols)):
+                        for j in range(len(valid_cols)):
+                            plt.text(j, i, f'{correlation_matrix.iloc[i, j]:.2f}', 
+                                    ha='center', va='center', color='black')
+                    
+                    plt.tight_layout()
+                    plt.savefig(self.experiment_dir / "correlation_matrix.png", dpi=150, bbox_inches='tight')
+                    plt.close()
+                    print("Correlation matrix plot saved")
+                else:
+                    print("Not enough numeric columns for correlation matrix")
+            except Exception as e:
+                print(f"Could not create correlation matrix: {e}")
         
-        plt.figure(figsize=(10, 8))
-        plt.imshow(correlation_matrix, cmap='coolwarm', aspect='auto')
-        plt.colorbar()
-        plt.xticks(range(len(numeric_cols)), numeric_cols, rotation=45)
-        plt.yticks(range(len(numeric_cols)), numeric_cols)
-        plt.title('Hyperparameter Correlation Matrix')
-        
-        # Add correlation values
-        for i in range(len(numeric_cols)):
-            for j in range(len(numeric_cols)):
-                plt.text(j, i, f'{correlation_matrix.iloc[i, j]:.2f}', 
-                        ha='center', va='center', color='black')
-        
-        plt.tight_layout()
-        plt.savefig(self.experiment_dir / "correlation_matrix.png", dpi=150, bbox_inches='tight')
-        plt.close()
+        print(f"Hyperparameter analysis plots saved to {self.experiment_dir}")
 
 
 # Example usage
