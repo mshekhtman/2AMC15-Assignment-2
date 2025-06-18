@@ -1,10 +1,9 @@
 """
-Simplified world/environment.py with realistic 8D state space
+Simplified world/environment.py with realistic 8D state space and IMPROVED REWARD FUNCTION
 Key changes:
-- Removed unrealistic direction to nearest target (vectors 2-3)
-- 8D state vector instead of 10D
-- More realistic robot sensor simulation
-- Cleaner state representation focused on local perception
+- Enhanced reward function with progress tracking and dense rewards
+- Better learning signals for DQN training
+- Maintains all existing functionality
 """
 import random
 import datetime
@@ -78,11 +77,16 @@ class Environment:
         self.state_representation = state_representation
         self.last_position = None  # Simple movement tracking
         self.initial_target_count = 0
+        
+        # ENHANCED REWARD TRACKING
+        self.previous_distance_to_nearest = None
+        self.visited_positions = set()
+        self.steps_without_progress = 0
               
         # Set up reward function
         if reward_fn is None:
-            warn("No reward function provided. Using simplified restaurant reward.")
-            self.reward_fn = self._simplified_restaurant_reward
+            warn("No reward function provided. Using enhanced restaurant reward.")
+            self.reward_fn = self._enhanced_restaurant_reward
         else:
             self.reward_fn = reward_fn
 
@@ -150,6 +154,11 @@ class Environment:
         # Initialize simplified tracking
         self.last_position = None
         self.initial_target_count = np.sum(self.grid == 3)
+        
+        # RESET ENHANCED REWARD TRACKING
+        self.previous_distance_to_nearest = None
+        self.visited_positions.clear()
+        self.steps_without_progress = 0
 
         # GUI setup
         if not self.no_gui:
@@ -315,9 +324,97 @@ class Environment:
         
         return local_view
 
+    def _enhanced_restaurant_reward(self, grid: np.ndarray, agent_pos: tuple[int, int], 
+                                  prev_pos: tuple[int, int] = None) -> float:
+        """Enhanced reward function for better DQN learning.
+        
+        Key improvements:
+        - Less harsh time penalty (-0.5 instead of -1)
+        - Reduced collision penalty (-5 instead of -10) 
+        - Stronger target reward (30 instead of 15)
+        - Progress-based rewards for dense feedback
+        - Exploration bonus for visiting new areas
+        """
+        reward = 0.0
+        
+        # 1. Base rewards based on current cell
+        if grid[agent_pos] == 0:  # Empty space
+            reward += -0.5  # Reduced time penalty (was -1)
+        elif grid[agent_pos] == 1 or grid[agent_pos] == 2:  # Collision
+            reward += -5.0  # Reduced collision penalty (was -10)
+            return reward  # Early return for collisions
+        elif grid[agent_pos] == 3:  # Target reached
+            reward += 30.0  # Increased target reward (was 15)
+            return reward  # Early return for successful target
+        else:
+            reward += -0.5  # Default case
+        
+        # 2. PROGRESS-BASED REWARDS (only for valid movements)
+        if prev_pos is not None and self.info["agent_moved"]:
+            progress_reward = self._calculate_progress_reward(agent_pos, prev_pos)
+            reward += progress_reward
+        
+        # 3. EXPLORATION BONUS
+        if agent_pos not in self.visited_positions:
+            reward += 0.5  # Small bonus for visiting new areas
+            self.visited_positions.add(agent_pos)
+        
+        return reward
+
+    def _calculate_progress_reward(self, current_pos: tuple[int, int], 
+                                 prev_pos: tuple[int, int]) -> float:
+        """Calculate reward based on progress toward nearest target."""
+        # Find all current target positions
+        target_positions = list(zip(*np.where(self.grid == 3)))
+        
+        if not target_positions:
+            return 0.0  # No targets left
+        
+        # Calculate distance to nearest target
+        current_distance = min(self._manhattan_distance(current_pos, target) 
+                             for target in target_positions)
+        
+        # Initialize previous distance if needed
+        if self.previous_distance_to_nearest is None:
+            self.previous_distance_to_nearest = min(self._manhattan_distance(prev_pos, target) 
+                                                   for target in target_positions)
+        
+        # Calculate progress
+        progress = self.previous_distance_to_nearest - current_distance
+        
+        # Update tracking
+        self.previous_distance_to_nearest = current_distance
+        
+        # Scale progress reward
+        progress_scale = 5.0  # Scale factor for progress rewards
+        max_grid_distance = max(self.grid.shape)
+        
+        if progress > 0:
+            # Made progress toward target
+            self.steps_without_progress = 0
+            progress_reward = progress_scale * progress / max_grid_distance
+        elif progress < 0:
+            # Moved away from target  
+            self.steps_without_progress += 1
+            progress_reward = progress_scale * progress / max_grid_distance * 0.5  # Smaller penalty
+        else:
+            # No progress
+            self.steps_without_progress += 1
+            progress_reward = 0.0
+            
+            # Small penalty for staying in place too long
+            if self.steps_without_progress > 15:
+                progress_reward = -0.1
+        
+        return progress_reward
+    
+    def _manhattan_distance(self, pos1: tuple[int, int], pos2: tuple[int, int]) -> float:
+        """Calculate Manhattan distance between two positions."""
+        return abs(pos1[0] - pos2[0]) + abs(pos1[1] - pos2[1])
+
     def _simplified_restaurant_reward(self, grid: np.ndarray, agent_pos: tuple[int, int], 
                                     prev_pos: tuple[int, int] = None) -> float:
-        """Simplified reward function for restaurant delivery.
+        """Original simplified reward function for restaurant delivery.
         
         Focus on core behaviors:
         - Time efficiency
