@@ -1,4 +1,4 @@
-"""Updated train.py for realistic 8D continuous state testing with Logger functionality."""
+"""Updated train.py for realistic 8D continuous state testing with PPO support and Logger functionality."""
 
 from argparse import ArgumentParser
 from pathlib import Path
@@ -10,7 +10,8 @@ try:
     from world import Environment
     from agents.random_agent import RandomAgent
     from agents.heuristic_agent import HeuristicAgent
-    from agents.DQN_agent import DQNAgent  # Updated import
+    from agents.DQN_agent import DQNAgent
+    from agents.PPO_agent import PPOAgent  # Added PPO support
     from logger import Logger
 except ModuleNotFoundError:
     from os import path
@@ -25,6 +26,7 @@ except ModuleNotFoundError:
     from agents.random_agent import RandomAgent
     from agents.heuristic_agent import HeuristicAgent
     from agents.DQN_agent import DQNAgent
+    from agents.PPO_agent import PPOAgent
     from logger import Logger
 
 
@@ -43,7 +45,7 @@ def parse_args():
     p.add_argument("--random_seed", type=int, default=0,
                    help="Random seed value for the environment.")
     p.add_argument("--agent_type", type=str, default="heuristic", 
-                   choices=["random", "heuristic", "dqn"],
+                   choices=["random", "heuristic", "dqn", "ppo"],  # Added PPO choice
                    help="Type of agent to train/test.")
     p.add_argument("--state_representation", type=str, default="continuous_vector",
                    choices=["continuous_vector", "discrete"],
@@ -59,14 +61,14 @@ def parse_args():
     return p.parse_args()
 
 
-def evaluate_DQN_agent_greedy(grid_fp: Path,
-                             agent,
-                             max_steps: int,
-                             sigma: float = 0.,
-                             agent_start_pos: tuple[int, int] = None,
-                             random_seed: int = 0,
-                             state_representation: str = 'continuous_vector'):
-    """Evaluate DQN agent with greedy policy (no exploration) for logger."""
+def evaluate_agent_greedy(grid_fp: Path,
+                         agent,
+                         max_steps: int,
+                         sigma: float = 0.,
+                         agent_start_pos: tuple[int, int] = None,
+                         random_seed: int = 0,
+                         state_representation: str = 'continuous_vector'):
+    """Evaluate agent with greedy policy (no exploration) for logger."""
     
     env = Environment(grid_fp=grid_fp,
                       no_gui=True,
@@ -92,7 +94,7 @@ def evaluate_DQN_agent_greedy(grid_fp: Path,
 def main(grid_paths: list[Path], no_gui: bool, iters: int, fps: int,
          sigma: float, random_seed: int, agent_type: str, state_representation: str, 
          episodes: int, agent_start_pos: tuple = None, save_agent: str = None, load_agent: str = None):
-    """Main training loop for realistic 8D state space with Logger functionality."""
+    """Main training loop for realistic 8D state space with PPO and Logger functionality."""
 
     for grid in grid_paths:
         print(f"Training on grid: {grid}")
@@ -120,16 +122,27 @@ def main(grid_paths: list[Path], no_gui: bool, iters: int, fps: int,
             if load_agent:
                 agent.load_agent(load_agent)
                 
+        elif agent_type == "ppo":  # Added PPO agent initialization
+            agent = PPOAgent(state_dim=8, action_dim=4)  # 8D state space
+            print("PPO agent initialized for 8D realistic continuous state space")
+            
+            # Load pre-trained agent if specified
+            if load_agent:
+                agent.load_agent(load_agent)
+                
         else:
             raise ValueError(f"Unknown agent type: {agent_type}")
         
         # Create a logger to keep track of training parameters and performance
-        # Use agent hyperparameters if it's a DQN agent, otherwise use defaults
+        # Use agent hyperparameters if it's a learning agent, otherwise use defaults
         if agent_type == "dqn":
             logger = Logger(grid, sigma, agent.gamma, agent.lr, agent.batch_size, 
                           agent.buffer_size, agent.min_replay_size,
                           agent.target_update_freq, agent.epsilon, 
                           agent.epsilon_min, agent.epsilon_decay)
+        elif agent_type == "ppo":  # Added PPO logger support
+            logger = Logger(grid, sigma, agent.gamma, agent.optimizer.param_groups[0]['lr'], 
+                          agent.batch_size, 0, 0, 0, 0, 0, 0)  # PPO doesn't use DQN-specific params
         else:
             logger = Logger(grid, sigma)
 
@@ -149,6 +162,9 @@ def main(grid_paths: list[Path], no_gui: bool, iters: int, fps: int,
                 if agent_type == "dqn":
                     # For DQN agent, use the training action method during training (with exploration)
                     action = agent.take_training_action(state, training=True)
+                elif agent_type == "ppo":
+                    # For PPO agent, use take_action (which handles exploration internally)
+                    action = agent.take_action(state)
                 else:
                     # For other agents, use their respective action methods
                     action = agent.take_action(state)
@@ -169,13 +185,13 @@ def main(grid_paths: list[Path], no_gui: bool, iters: int, fps: int,
                     success_count += 1
                     break
 
-            # Log target rewards (training with epsilon-greedy)
+            # Log target rewards (training with exploration)
             logger.log_target_rewards(episode_reward)
 
             episode_rewards.append(episode_reward)
             episode_lengths.append(episode_length)
             
-            # Print progress and evaluate DQN without epsilon-greedy every 20 episodes
+            # Print progress and evaluate learning agents every 20 episodes
             if episode % 20 == 0:
                 avg_reward = np.mean(episode_rewards[-20:])
                 avg_length = np.mean(episode_lengths[-20:])
@@ -183,13 +199,13 @@ def main(grid_paths: list[Path], no_gui: bool, iters: int, fps: int,
                 print(f"Episode {episode}: Avg Reward = {avg_reward:.2f}, "
                       f"Avg Length = {avg_length:.1f}, Success Rate = {success_rate:.1f}%")
                 
-                # Log DQN rewards if training DQN agent has started
+                # Log learning agent rewards with greedy evaluation
                 if agent_type == "dqn" and len(agent.replay_buffer) > agent.min_replay_size:
-                    # Evaluate with greedy policy (no exploration)
-                    stats = evaluate_DQN_agent_greedy(grid, agent, iters, sigma, 
-                                                    agent_start_pos=start_pos,
-                                                    random_seed=random_seed, 
-                                                    state_representation=state_representation)
+                    # Evaluate DQN with greedy policy (no exploration)
+                    stats = evaluate_agent_greedy(grid, agent, iters, sigma, 
+                                                agent_start_pos=start_pos,
+                                                random_seed=random_seed, 
+                                                state_representation=state_representation)
                     logger.log_DQN_rewards(episode, stats['cumulative_reward'])
                     
                     # Show DQN training stats
@@ -197,14 +213,29 @@ def main(grid_paths: list[Path], no_gui: bool, iters: int, fps: int,
                     print(f"  DQN Stats: epsilon={training_stats['epsilon']:.3f}, "
                           f"buffer_size={training_stats['buffer_size']}, "
                           f"avg_loss={training_stats['avg_loss_last_100']:.4f}")
+                
+                elif agent_type == "ppo":
+                    # Evaluate PPO with current policy (already deterministic in evaluation)
+                    stats = evaluate_agent_greedy(grid, agent, iters, sigma, 
+                                                agent_start_pos=start_pos,
+                                                random_seed=random_seed, 
+                                                state_representation=state_representation)
+                    logger.log_DQN_rewards(episode, stats['cumulative_reward'])
+                    
+                    # Show PPO training stats
+                    training_stats = agent.get_training_stats()
+                    print(f"  PPO Stats: episodes={training_stats['episode_count']}, "
+                          f"updates={training_stats['update_count']}, "
+                          f"policy_loss={training_stats['avg_policy_loss']:.4f}, "
+                          f"entropy={training_stats['avg_entropy']:.4f}")
 
         # Save trained agent if specified
-        if save_agent and agent_type == "dqn":
+        if save_agent and agent_type in ["dqn", "ppo"]:
             agent.save_agent(save_agent)
 
         # After all episodes, plot the rewards
         logger.plot_target_rewards()
-        logger.plot_DQN_rewards()
+        logger.plot_DQN_rewards()  # Works for both DQN and PPO evaluation rewards
         logger.print_summary()
 
         # Final statistics (Assignment 1 style)
@@ -223,6 +254,13 @@ def main(grid_paths: list[Path], no_gui: bool, iters: int, fps: int,
             print(f"Shortest successful episode: {min(successful_lengths):.0f} steps")
         else:
             print("No successful episodes completed")
+        
+        # Show final training stats for learning agents
+        if agent_type in ["dqn", "ppo"]:
+            final_stats = agent.get_training_stats()
+            print(f"\nFinal Training Stats:")
+            for key, value in final_stats.items():
+                print(f"  {key}: {value}")
         
         # Evaluate the trained agent (Assignment 1 style) - THIS CREATES THE PATH IMAGE
         print(f"\n=== EVALUATING AGENT ===")
