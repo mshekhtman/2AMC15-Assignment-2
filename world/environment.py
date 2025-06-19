@@ -266,7 +266,7 @@ class Environment:
         Returns:
             8-dimensional state vector:
             [0-1]: Normalized position (x, y)
-            [2-5]: Clear directions (front, left, right, back) - obstacle detection
+            [2-5]: Clear directions (down, up, left, right) - obstacle detection
             [6]: Remaining targets (normalized) - mission tracking
             [7]: Mission progress
         """
@@ -278,11 +278,13 @@ class Environment:
         # 2. Local environment sensing (realistic - robot has sensors)
         local_view = self._get_local_view_simple()
         
-        # Check specific directions for obstacles (what sensors would detect)
-        front_clear = float(local_view[0, 1] == 0)  # Up direction
-        left_clear = float(local_view[1, 0] == 0)   # Left direction
-        right_clear = float(local_view[1, 2] == 0)  # Right direction
-        back_clear = float(local_view[2, 1] == 0)   # Down direction
+        # FIXED: Check specific directions for obstacles with correct indexing
+        # local_view is 3x3 with agent at [1,1]
+        # [0,1] = up, [2,1] = down, [1,0] = left, [1,2] = right
+        down_clear = float(local_view[2, 1] == 0)   # Down direction (action 0)
+        up_clear = float(local_view[0, 1] == 0)     # Up direction (action 1)  
+        left_clear = float(local_view[1, 0] == 0)   # Left direction (action 2)
+        right_clear = float(local_view[1, 2] == 0)  # Right direction (action 3)
         
         # 3. Mission tracking (realistic - robot tracks its assigned deliveries)
         target_positions = np.where(self.grid == 3)
@@ -294,13 +296,14 @@ class Environment:
             remaining_targets_norm = 0
             progress = 1.0
         
-        # Realistic 8D state vector
+        # Realistic 8D state vector with FIXED clearance mapping
         state_vector = np.array([
             # Position (2 features) - GPS/odometry
             norm_x, norm_y,
             
             # Local obstacle detection (4 features) - sensor data
-            front_clear, left_clear, right_clear, back_clear,
+            # ORDERED TO MATCH ACTION INDICES: [down, up, left, right]
+            down_clear, up_clear, left_clear, right_clear,
             
             # Mission status (2 features) - internal tracking
             remaining_targets_norm, progress

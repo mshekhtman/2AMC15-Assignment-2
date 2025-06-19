@@ -20,7 +20,7 @@ class HeuristicAgent(BaseAgent):
         
         8D State vector:
         [0-1]: Normalized position (x, y)
-        [2-5]: Clear directions (front, left, right, back)
+        [2-5]: Clear directions (down, up, left, right) - FIXED ORDER
         [6]: Remaining targets (normalized)
         [7]: Mission progress
         """
@@ -32,41 +32,28 @@ class HeuristicAgent(BaseAgent):
         pos_y = state[1]
         
         # FIXED: Clearance features [2-5] with correct mapping
-        # state[2] = front_clear (up direction)
-        # state[3] = left_clear (left direction)  
-        # state[4] = right_clear (right direction)
-        # state[5] = back_clear (down direction)
-        front_clear = state[2]   # Up direction
-        left_clear = state[3]    # Left direction
-        right_clear = state[4]   # Right direction  
-        back_clear = state[5]    # Down direction
+        # state[2] = down_clear (action 0)
+        # state[3] = up_clear (action 1)
+        # state[4] = left_clear (action 2)  
+        # state[5] = right_clear (action 3)
+        clearance_values = state[2:6]  # [down, up, left, right]
         
         # Mission features [6-7]
         remaining_targets = state[6]  # Normalized remaining targets
         progress = state[7]           # Mission progress
         
-        # FIXED: Correct mapping between clearance and actions
-        # Actions: 0=down, 1=up, 2=left, 3=right
-        # Clearance: [down, up, left, right]
-        action_clearance = [
-            back_clear,   # Action 0 (down) -> back_clear
-            front_clear,  # Action 1 (up) -> front_clear
-            left_clear,   # Action 2 (left) -> left_clear
-            right_clear   # Action 3 (right) -> right_clear
-        ]
-        
-        # Find all clear directions
+        # Find all clear directions (actions with clearance > 0.5)
         available_actions = []
-        for action_id, is_clear in enumerate(action_clearance):
+        for action_id, is_clear in enumerate(clearance_values):
             if is_clear > 0.5:  # Threshold for "clear"
                 available_actions.append(action_id)
         
         if available_actions:
-            # If multiple actions available, add some intelligent preference
+            # ENHANCED STRATEGY: Intelligent action selection
             if len(available_actions) > 1:
-                # Prefer exploration if many targets remain
+                # Strategy 1: Exploration preference when many targets remain
                 if remaining_targets > 0.5:
-                    # Prefer moving to unexplored areas (edges)
+                    # Prefer moving to unexplored areas (towards edges)
                     if pos_x < 0.3 and 3 in available_actions:  # Near left edge, go right
                         return 3
                     elif pos_x > 0.7 and 2 in available_actions:  # Near right edge, go left
@@ -75,6 +62,20 @@ class HeuristicAgent(BaseAgent):
                         return 0
                     elif pos_y > 0.7 and 1 in available_actions:  # Near bottom, go up
                         return 1
+                
+                # Strategy 2: Center-seeking when progress is low
+                elif progress < 0.3:
+                    center_x, center_y = 0.5, 0.5
+                    
+                    # Move towards center
+                    if pos_x < center_x and 3 in available_actions:  # Go right towards center
+                        return 3
+                    elif pos_x > center_x and 2 in available_actions:  # Go left towards center
+                        return 2
+                    elif pos_y < center_y and 0 in available_actions:  # Go down towards center
+                        return 0
+                    elif pos_y > center_y and 1 in available_actions:  # Go up towards center
+                        return 1
             
             # Default: choose random available action
             return np.random.choice(available_actions)
@@ -82,8 +83,28 @@ class HeuristicAgent(BaseAgent):
         else:
             # No clear directions - emergency random action
             # This should rarely happen if clearance detection works correctly
+            print(f"WARNING: No clear directions available! State: {state}")
             return np.random.randint(0, 4)
     
     def update(self, state, reward: float, action: int, next_state=None, done: bool = False):
         """Heuristic agent doesn't learn from experience."""
         pass
+    
+    def get_strategy_info(self, state):
+        """Debug method to understand agent's decision process."""
+        state = self.preprocess_state(state)
+        
+        info = {
+            'position': (state[0], state[1]),
+            'clearance': {
+                'down': state[2],
+                'up': state[3], 
+                'left': state[4],
+                'right': state[5]
+            },
+            'remaining_targets': state[6],
+            'progress': state[7],
+            'available_actions': [i for i, clear in enumerate(state[2:6]) if clear > 0.5]
+        }
+        
+        return info
