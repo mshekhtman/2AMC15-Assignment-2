@@ -21,7 +21,7 @@ This repository implements a **8D realistic continuous state space environment**
 ### **Realistic State Representation (8D Vector)**
 ```python
 [0-1]   : Normalized position (x, y)           # GPS/odometry [0, 1]
-[2-5]   : Clear directions (front/left/right/back) # Sensor data {0, 1}
+[2-5]   : Clear directions (down/up/left/right) # Sensor data {0, 1}
 [6]     : Remaining targets (normalized)       # Mission tracking [0, 1]
 [7]     : Mission progress                     # Internal status [0, 1]
 ```
@@ -47,254 +47,221 @@ pip install -r requirements.txt
 python world/create_restaurant_grids.py
 ```
 
-## Testing Guide
+## Key Features
 
-### **1. Create Test Grids**
-```bash
-python world/create_restaurant_grids.py
-```
-**Creates**: `open_space.npy`, `simple_restaurant.npy`, `corridor_test.npy`, `maze_challenge.npy`, `assignment2_main.npy`
-
-### **2. Basic Agent Testing**
-
-#### Random Agent (Baseline)
-```bash
-# Quick test
-python train.py grid_configs/A2/open_space.npy --agent_type random --episodes 5
-
-# Performance test  
-python train.py grid_configs/A2/simple_restaurant.npy --agent_type random --episodes 20 --no_gui
-```
-
-#### Heuristic Agent (Smart Baseline)
-```bash
-# Visual test
-python train.py grid_configs/A2/simple_restaurant.npy --agent_type heuristic --episodes 10
-
-# Performance benchmark with fixed starting position
-python train.py grid_configs/A1_grid.npy --agent_type heuristic --episodes 25 --no_gui --agent_start_pos 3 11
-```
-
-### **3. DQN Agent Testing**
-
-#### Quick DQN Validation
-```bash
-# Simple grid (fast training)
-python train.py grid_configs/A2/open_space.npy --agent_type dqn --episodes 50 --no_gui
-
-# Restaurant layout
-python train.py grid_configs/A2/simple_restaurant.npy --agent_type dqn --episodes 100 --no_gui
-```
-
-#### Full DQN Training with Save/Load
-```bash
-# Train and save model
-python train.py grid_configs/A1_grid.npy --agent_type dqn --episodes 100 --no_gui --agent_start_pos 3 11 --save_agent "trained_model.pth"
-
-# Load and continue training
-python train.py grid_configs/A1_grid.npy --agent_type dqn --episodes 50 --no_gui --agent_start_pos 3 11 --load_agent "trained_model.pth"
-```
-
-### **4. Performance Comparison**
-```bash
-# Compare all agents on same grid with fixed starting position
-python train.py grid_configs/A1_grid.npy --agent_type random --episodes 20 --no_gui --agent_start_pos 3 11
-python train.py grid_configs/A1_grid.npy --agent_type heuristic --episodes 20 --no_gui --agent_start_pos 3 11
-python train.py grid_configs/A1_grid.npy --agent_type dqn --episodes 100 --no_gui --agent_start_pos 3 11
-```
-
-### **5. Visual Training (with GUI)**
-```bash
-# Watch agents learn (slower)
-python train.py grid_configs/A2/simple_restaurant.npy --agent_type heuristic --episodes 5 --fps 10
-python train.py grid_configs/A1_grid.npy --agent_type dqn --episodes 20 --fps 10 --agent_start_pos 3 11
-```
-
-### **6. Grid Complexity Progression**
-```bash
-# Easy to hard progression with consistent starting positions
-python train.py grid_configs/A2/open_space.npy --agent_type dqn --episodes 30 --no_gui --agent_start_pos 2 2
-python train.py grid_configs/A2/simple_restaurant.npy --agent_type dqn --episodes 50 --no_gui --agent_start_pos 2 8
-python train.py grid_configs/A2/corridor_test.npy --agent_type dqn --episodes 75 --no_gui --agent_start_pos 2 4
-python train.py grid_configs/A2/maze_challenge.npy --agent_type dqn --episodes 100 --no_gui --agent_start_pos 2 6
-```
-
-## File Structure
-
-```
-├── agents/
-│   ├── base_agent.py            # Enhanced for 8D realistic states
-│   ├── random_agent.py          # Random baseline
-│   ├── heuristic_agent.py       # Intelligent rule-based agent
-│   ├── DQN_agent.py             # DQN implementation with save/load
-│   └── DQN_nn.py                # Neural network architecture (8D input)
-├── world/
-│   ├── environment.py           # 8D realistic state implementation
-│   ├── grid.py                  # Grid representation
-│   ├── gui.py                   # Visualization
-│   ├── helpers.py               # Utilities and path visualization
-│   └── create_restaurant_grids.py  # Grid generation script
-├── grid_configs/
-│   ├── A1_grid.npy              # Main assignment grid
-│   └── A2/                      # Additional test grids
-│       ├── open_space.npy       # Basic testing
-│       ├── simple_restaurant.npy # Core restaurant layout
-│       ├── corridor_test.npy    # Navigation testing
-│       ├── maze_challenge.npy   # Complex navigation
-│       └── assignment2_main.npy # Primary evaluation grid
-├── train.py                     # Training script with logger
-├── logger.py                    # Training progress tracking
-├── README.md                    # This file
-└── requirements.txt             # Dependencies
-```
-
-## Available Agents
-
-| Agent | Type | Use Case | Expected Performance |
-|-------|------|----------|---------------------|
-| `random` | Baseline | Sanity check | ~10-20% success |
-| `heuristic` | Rule-based | Strong baseline | ~80-95% success |
-| `dqn` | Deep RL | Assignment 2 focus | ~60-80% success* |
-
-*Performance varies significantly with starting position due to exploration-based learning
-
-## Environment Configuration
-
+### **8D Realistic State Space**
+Unlike traditional grid-based RL, our environment uses realistic robot sensors:
 ```python
-# 8D realistic continuous state (default)
-env = Environment(
-    grid_fp="grid_configs/A1_grid.npy",
-    state_representation="continuous_vector",
-    agent_start_pos=(3, 11)  # Recommended: always specify starting position
-)
-
-# Backward compatible discrete state
-env = Environment(
-    grid_fp="grid_configs/A1_grid.npy", 
-    state_representation="discrete"
-)
+[0-1]: Normalized position (x, y)     # GPS/odometry
+[2-5]: Clear directions (UDLR)        # Lidar/camera sensors  
+[6-7]: Mission status                 # Task management system
 ```
 
-## Training Arguments
+### **Available Agents**
+- **Random Agent**: Baseline performance
+- **Heuristic Agent**: Rule-based intelligent baseline
+- **DQN Agent**: Deep Q-Network with 8D state input
+- **PPO Agent**: Proximal Policy Optimization (coming soon)
 
+### **Restaurant Grids**
+- `A1_grid.npy` - Main assignment grid
+- `open_space.npy` - Basic testing environment
+- `simple_restaurant.npy` - Core restaurant layout
+- `corridor_test.npy` - Navigation challenges
+- `maze_challenge.npy` - Complex pathfinding
+- `assignment2_main.npy` - Comprehensive evaluation
+
+## Usage
+
+### **Training Arguments**
 ```bash
 python train.py <GRID> [options]
 
 Required:
   GRID                    Path to grid file (.npy)
 
-Optional:
+Agent Options:
   --agent_type {random,heuristic,dqn}  Agent to train (default: heuristic)
   --episodes N            Number of episodes (default: 100)
-  --agent_start_pos X Y   Starting position (highly recommended)
+  --agent_start_pos X Y   Starting position (recommended for consistent results)
+
+Environment Options:
   --no_gui               Disable visual interface (faster training)
-  --save_agent PATH      Save trained DQN model
-  --load_agent PATH      Load pre-trained DQN model
   --sigma FLOAT          Environment stochasticity (default: 0.1)
   --random_seed INT      Random seed (default: 0)
+
+Training Options:
+  --save_agent PATH      Save trained DQN model
+  --load_agent PATH      Load pre-trained DQN model
+  --iter INT             Max steps per episode (default: 1000)
 ```
 
-## Expected Results
+### **Example Commands**
 
-### Performance Benchmarks (with fixed starting position)
-- **Random Agent**: -800 to -1200 average reward, 10-20% success rate
-- **Heuristic Agent**: -50 to -200 average reward, 80-95% success rate  
-- **DQN Agent**: -500 to -1500 average reward, 60-80% success rate (position-dependent)
+#### **Development Testing**
+```bash
+# Quick validation
+python train.py grid_configs/A2/open_space.npy --agent_type heuristic --episodes 5
 
-### Training Progress (DQN)
-- **Episodes 0-20**: Random exploration (-2000+ average reward)
-- **Episodes 20-50**: Learning basic navigation (-1500 to -1000 reward)
-- **Episodes 50+**: Strategy refinement (-1000 to -500 reward)
+# DQN training on simple grid
+python train.py grid_configs/A2/simple_restaurant.npy --agent_type dqn --episodes 30 --no_gui
 
-### Logger Output
-- **Training Plots**: `results/[timestamp]_targetrewardsplot.png`
-- **Evaluation Plots**: `results/[timestamp]_DQNrewardsplot.png`
-- **Performance Metrics**: Automatic summary statistics
+# Performance comparison
+python train.py grid_configs/A1_grid.npy --agent_type heuristic --episodes 20 --agent_start_pos 3 11
+python train.py grid_configs/A1_grid.npy --agent_type dqn --episodes 50 --agent_start_pos 3 11
+```
+
+#### **Model Management**
+```bash
+# Train and save DQN model
+python train.py grid_configs/A1_grid.npy --agent_type dqn --episodes 100 --save_agent "my_model.pth" --no_gui
+
+# Load and continue training
+python train.py grid_configs/A1_grid.npy --agent_type dqn --episodes 50 --load_agent "my_model.pth" --no_gui
+
+# Evaluate saved model
+python train.py grid_configs/A1_grid.npy --agent_type dqn --episodes 1 --load_agent "my_model.pth" --agent_start_pos 3 11
+```
+
+#### **Grid Complexity Progression**
+```bash
+# Easy → Hard progression
+python train.py grid_configs/A2/open_space.npy --agent_type dqn --episodes 20 --no_gui
+python train.py grid_configs/A2/simple_restaurant.npy --agent_type dqn --episodes 40 --no_gui  
+python train.py grid_configs/A1_grid.npy --agent_type dqn --episodes 60 --no_gui
+python train.py grid_configs/A2/maze_challenge.npy --agent_type dqn --episodes 80 --no_gui
+```
+
+## Project Structure
+
+```
+├── agents/
+│   ├── base_agent.py            # Abstract base class for all agents
+│   ├── random_agent.py          # Random baseline agent
+│   ├── heuristic_agent.py       # Rule-based intelligent agent
+│   ├── DQN_agent.py             # Deep Q-Network implementation
+│   ├── DQN_nn.py                # Neural network architectures
+│   └── PPO_agent.py             # PPO implementation (coming soon)
+├── world/
+│   ├── environment.py           # Main environment with 8D state space
+│   ├── grid.py                  # Grid representation
+│   ├── gui.py                   # Visualization interface
+│   ├── helpers.py               # Utility functions
+│   └── create_restaurant_grids.py  # Grid generation
+├── grid_configs/
+│   ├── A1_grid.npy              # Main assignment grid
+│   └── A2/                      # Assignment 2 specific grids
+├── experimental_framework/      # Advanced analysis tools
+├── train.py                     # Main training script
+├── logger.py                    # Training progress tracking
+└── README.md                    # This file
+```
+
+## Environment Details
+
+### **State Representation**
+Our 8D continuous state vector represents realistic robot sensing:
+
+```python
+def get_realistic_delivery_state(self) -> np.ndarray:
+    """Generate 8D state vector from robot sensors."""
+    return np.array([
+        norm_x, norm_y,                    # Position (GPS/odometry)
+        down_clear, up_clear,              # Movement clearance
+        left_clear, right_clear,           # (lidar/camera sensors)
+        remaining_targets_norm,            # Mission tracking
+        progress                           # Task completion
+    ])
+```
+
+### **Reward Function**
+Enhanced reward function for better learning:
+- **Target reached**: +30 (mission success)
+- **Movement step**: -0.5 (efficiency incentive)
+- **Collision**: -5 (safety penalty)
+- **Progress bonus**: +5 × (distance improvement) (dense feedback)
+- **Exploration bonus**: +0.5 (new area visited)
+
+### **Action Space**
+Discrete movement actions:
+- `0`: Move down
+- `1`: Move up  
+- `2`: Move left
+- `3`: Move right
+
+## Expected Performance
+
+### **Performance Benchmarks** (with consistent starting positions)
+- **Random Agent**: -800 to -1200 avg reward, 10-20% success rate
+- **Heuristic Agent**: -50 to -200 avg reward, 80-95% success rate
+- **DQN Agent**: -200 to -800 avg reward, 50-80% success rate (varies by grid/position)
+
+### **Training Progress** (DQN)
+- **Episodes 0-20**: Random exploration, high negative rewards
+- **Episodes 20-50**: Learning basic navigation patterns
+- **Episodes 50+**: Policy refinement and optimization
 
 ## Output Files
 
-After training, check:
-- **`results/`**: Training curves and path visualizations
-- **`*.pth`**: Saved DQN models (if `--save_agent` used)
-- **Console**: Real-time progress and final statistics
-- **GUI**: Real-time agent movement (without `--no_gui`)
+Training automatically generates:
+- **`results/`**: Training curves and performance plots
+- **`*.pth`**: Saved DQN models (when using `--save_agent`)
+- **Path visualizations**: Agent movement heatmaps
+- **Performance logs**: Detailed training statistics
 
-## Key Insights from Testing
+## Key Insights
 
 ### **Starting Position Dependency**
-DQN performance varies dramatically with starting position:
+DQN performance varies significantly with starting position:
 ```bash
-# Some positions lead to 90%+ success
-python train.py grid_configs/A1_grid.npy --agent_type dqn --episodes 50 --agent_start_pos 3 11
-
-# Other positions may lead to 30% success
-python train.py grid_configs/A1_grid.npy --agent_type dqn --episodes 50 --agent_start_pos 8 8
+# Different starting positions can lead to 30-90% success rate variation
+python train.py grid_configs/A1_grid.npy --agent_type dqn --episodes 50 --agent_start_pos 3 11  # Good
+python train.py grid_configs/A1_grid.npy --agent_type dqn --episodes 50 --agent_start_pos 8 8   # Harder
 ```
 
-### **Training vs Evaluation Gap**
-Logger reveals important differences:
-- **Training Success Rate**: 60-70% (includes exploration luck)
-- **DQN Evaluation Rewards**: Often much worse (pure policy performance)
-- **Final Evaluation**: Can vary from complete success to complete failure
+### **Grid Difficulty Ranking**
+1. **open_space** (Easiest) - Minimal obstacles
+2. **simple_restaurant** - Basic restaurant layout  
+3. **A1_grid** - Balanced complexity
+4. **corridor_test** - Navigation challenges
+5. **assignment2_main** - Complex restaurant
+6. **maze_challenge** (Hardest) - Advanced pathfinding
 
 ### **Realistic Learning Challenge**
 Without omniscient target knowledge:
 - Agent must **explore to discover targets**
-- **Spatial memory** becomes crucial
-- **Local obstacle detection** limits long-range planning
-- **Position-specific strategies** don't generalize well
+- **Local sensor data** limits long-range planning
+- **Spatial memory** becomes crucial for navigation
+- **Position-specific policies** don't generalize well
 
 ## Troubleshooting
 
-### Common Issues
+### **Common Issues**
 ```bash
 # Import errors
-export PYTHONPATH="${PYTHONPATH}:$(pwd)"  # Linux/Mac
-set PYTHONPATH=%PYTHONPATH%;%cd%          # Windows
+export PYTHONPATH="${PYTHONPATH}:$(pwd)"
 
-# Missing grids
+# Missing grids  
 python world/create_restaurant_grids.py
 
-# Missing results directory
-mkdir results
+# DQN performance issues
+python train.py grid_configs/A1_grid.npy --agent_type dqn --episodes 100 --agent_start_pos 3 11  # Use fixed start
 
-# Agent fails from different starting positions
-# Always use --agent_start_pos for consistent testing
-```
-
-### Performance Issues
-```bash
-# If DQN performance is poor:
-# 1. Use fixed starting position
-python train.py grid_configs/A1_grid.npy --agent_type dqn --episodes 100 --agent_start_pos 3 11
-
-# 2. Try longer training
-python train.py grid_configs/A1_grid.npy --agent_type dqn --episodes 200 --agent_start_pos 3 11
-
-# 3. Compare with heuristic baseline
+# Compare with baseline
 python train.py grid_configs/A1_grid.npy --agent_type heuristic --episodes 20 --agent_start_pos 3 11
 ```
 
-### Validation Test
+### **GPU/CUDA Setup**
 ```bash
-# Quick environment check
-python train.py grid_configs/A1_grid.npy --agent_type random --episodes 1 --agent_start_pos 3 11
+# Test CUDA functionality
+python test_cuda_setup.py
+
+# Force CPU if needed
+CUDA_VISIBLE_DEVICES="" python train.py grid_configs/A1_grid.npy --agent_type dqn
 ```
 
-## Research Notes
-
-### State Space Design Philosophy
-The 8D state space represents **realistic robot sensing**:
-- **No omniscient target knowledge** (unlike unrealistic 10D version)
-- **Local sensor simulation** (lidar/camera range)
-- **Position tracking** (GPS/odometry equivalent)
-- **Mission awareness** (task management system)
-
-### Logger Functionality
-The training logger provides crucial insights:
-- **Separates exploration noise from true performance**
-- **Tracks learning curves for both training and evaluation**
-- **Reveals performance gaps and learning plateaus**
-- **Enables hyperparameter optimization**
-
-This creates a more challenging but realistic learning environment where agents must develop robust navigation strategies through exploration and spatial reasoning.
+### **Quick Validation**
+```bash
+# Sanity check
+python train.py grid_configs/A1_grid.npy --agent_type random --episodes 1 --agent_start_pos 3 11
+```
