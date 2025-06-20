@@ -258,11 +258,6 @@ class Environment:
     def get_realistic_delivery_state(self) -> np.ndarray:
         """Generate realistic 8D continuous state vector.
         
-        This represents what a real delivery robot could actually sense:
-        - Its own position (from GPS/odometry)
-        - Local obstacle detection (from sensors like lidar/cameras)
-        - Mission status (from internal tracking)
-        
         Returns:
             8-dimensional state vector:
             [0-1]: Normalized position (x, y)
@@ -271,22 +266,47 @@ class Environment:
             [7]: Mission progress
         """
         
-        # 1. Normalized position (realistic - robot knows its position)
+        # 1. Normalized position
         norm_x = self.agent_pos[0] / self.grid.shape[0]
         norm_y = self.agent_pos[1] / self.grid.shape[1]
         
-        # 2. Local environment sensing (realistic - robot has sensors)
-        local_view = self._get_local_view_simple()
+        # 2. Enhanced clearance detection
+        x, y = self.agent_pos
         
-        # FIXED: Check specific directions for obstacles with correct indexing
-        # local_view is 3x3 with agent at [1,1]
-        # [0,1] = up, [2,1] = down, [1,0] = left, [1,2] = right
-        down_clear = float(local_view[2, 1] == 0)   # Down direction (action 0)
-        up_clear = float(local_view[0, 1] == 0)     # Up direction (action 1)  
-        left_clear = float(local_view[1, 0] == 0)   # Left direction (action 2)
-        right_clear = float(local_view[1, 2] == 0)  # Right direction (action 3)
+        # Check each direction for obstacles
+        # Down (action 0): check (x, y+1)
+        down_pos = (x, y + 1)
+        if (0 <= down_pos[0] < self.grid.shape[0] and 
+            0 <= down_pos[1] < self.grid.shape[1]):
+            down_clear = float(self.grid[down_pos] == 0)
+        else:
+            down_clear = 0.0
         
-        # 3. Mission tracking (realistic - robot tracks its assigned deliveries)
+        # Up (action 1): check (x, y-1)  
+        up_pos = (x, y - 1)
+        if (0 <= up_pos[0] < self.grid.shape[0] and 
+            0 <= up_pos[1] < self.grid.shape[1]):
+            up_clear = float(self.grid[up_pos] == 0)
+        else:
+            up_clear = 0.0
+        
+        # Left (action 2): check (x-1, y)
+        left_pos = (x - 1, y)
+        if (0 <= left_pos[0] < self.grid.shape[0] and 
+            0 <= left_pos[1] < self.grid.shape[1]):
+            left_clear = float(self.grid[left_pos] == 0)
+        else:
+            left_clear = 0.0
+        
+        # Right (action 3): check (x+1, y)
+        right_pos = (x + 1, y)
+        if (0 <= right_pos[0] < self.grid.shape[0] and 
+            0 <= right_pos[1] < self.grid.shape[1]):
+            right_clear = float(self.grid[right_pos] == 0)
+        else:
+            right_clear = 0.0
+        
+        # 3. Mission tracking
         target_positions = np.where(self.grid == 3)
         if self.initial_target_count > 0:
             current_targets = len(target_positions[0]) if len(target_positions[0]) > 0 else 0
@@ -296,17 +316,16 @@ class Environment:
             remaining_targets_norm = 0
             progress = 1.0
         
-        # Realistic 8D state vector with FIXED clearance mapping
+        # 4. Build state vector with validation
         state_vector = np.array([
-            # Position (2 features) - GPS/odometry
-            norm_x, norm_y,
-            
-            # Local obstacle detection (4 features) - sensor data
-            # ORDERED TO MATCH ACTION INDICES: [down, up, left, right]
-            down_clear, up_clear, left_clear, right_clear,
-            
-            # Mission status (2 features) - internal tracking
-            remaining_targets_norm, progress
+            np.clip(norm_x, 0.0, 1.0), 
+            np.clip(norm_y, 0.0, 1.0),
+            float(down_clear), 
+            float(up_clear), 
+            float(left_clear), 
+            float(right_clear),
+            np.clip(remaining_targets_norm, 0.0, 1.0), 
+            np.clip(progress, 0.0, 1.0)
         ], dtype=np.float32)
         
         return state_vector
