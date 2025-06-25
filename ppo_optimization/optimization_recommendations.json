@@ -1,0 +1,44 @@
+{
+  "timestamp": "2025-06-21T22:14:51.478311",
+  "summary": {
+    "best_overall_grid": "open_space",
+    "best_overall_reward": -286.36875,
+    "total_experiments": 60,
+    "grids_tested": 6
+  },
+  "grid_specific": {
+    "open_space": {
+      "difficulty": "easy",
+      "optimal_config": {
+        "lr": 0.0005,
+        "gamma": 0.99,
+        "gae_lambda": 0.95,
+        "clip_eps": 0.25,
+        "entropy_coef": 0.03,
+        "value_coef": 1.0,
+        "rollout_steps": 128,
+        "ppo_epochs": 6,
+        "batch_size": 32,
+        "hidden_dim": 128
+      },
+      "expected_performance": {
+        "mean_reward": -286.36875,
+        "success_rate": 0.975,
+        "convergence_episodes": 40
+      },
+      "recommendations": [
+        "Conservative learning rate needed - stable learning",
+        "Long rollouts beneficial - complex planning required"
+      ],
+      "performance_range": 1100.34375
+    },
+    "simple_restaurant": {
+      "difficulty": "medium",
+      "optimal_config": {
+        "lr": 0.001,
+        "gamma": 0.99,
+        "gae_lambda": 0.95,
+        "clip_eps": 0.2,
+        "entropy_coef": 0.03,
+        "value_coef": 0.5,
+        "rollout_steps": 
