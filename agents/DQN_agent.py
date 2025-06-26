@@ -1,6 +1,6 @@
 """
 DQN Agent for realistic 8D continuous state space restaurant delivery robot.
-This file contains the complete DQN algorithm implementation.
+UPDATED: Now automatically uses optimal hyperparameters based on grid.
 """
 import numpy as np
 import torch
@@ -8,6 +8,7 @@ import torch.nn as nn
 import torch.optim as optim
 import random
 from collections import deque
+from pathlib import Path
 
 # Handle imports like other agent files
 try:
@@ -30,54 +31,73 @@ from agents.DQN_nn import DQNetwork
 class DQNAgent(BaseAgent):
     """DQN Agent for realistic 8D continuous state space restaurant delivery."""
     
+    # ADDED: Optimal hyperparameters found through optimization
+    OPTIMAL_CONFIGS = {
+        # Best performing configuration (experiment_id 14)
+        'default': {
+            'lr': 0.001,
+            'batch_size': 128,
+            'buffer_size': 50000,
+            'target_update_freq': 500,
+            'epsilon_decay': 0.985,
+            'epsilon_min': 0.05,
+            'gamma': 0.99
+        },
+        # Grid-specific overrides if needed
+        'maze': {
+            'lr': 0.0005,
+            'epsilon_min': 0.01,
+            'target_update_freq': 1000
+        }
+    }
+    
     def __init__(self, 
-                 state_dim=8,  # Updated for realistic 8D state space
+                 state_dim=8,
                  action_dim=4, 
                  state_type='continuous_vector',
-                 gamma=0.99, 
-                 lr=1e-3, 
-                 batch_size=64, 
-                 buffer_size=50000,  # Adequate for realistic environment
+                 gamma=None,  # UPDATED: Allow None to use optimal
+                 lr=None,     # UPDATED: Allow None to use optimal
+                 batch_size=None,  # UPDATED: Allow None to use optimal
+                 buffer_size=None,  # UPDATED: Allow None to use optimal
                  min_replay_size=1000, 
-                 target_update_freq=500,  # Frequent updates for exploration learning
+                 target_update_freq=None,  # UPDATED: Allow None to use optimal
                  epsilon_start=1.0,
-                 epsilon_min=0.01,  # Lower minimum for better exploitation
-                 epsilon_decay=0.995,
-                 verbose=True):  # Add verbose parameter
-        """Initialize DQN Agent for realistic 8D state space.
+                 epsilon_min=None,  # UPDATED: Allow None to use optimal
+                 epsilon_decay=None,  # UPDATED: Allow None to use optimal
+                 verbose=True,
+                 grid_path=None):  # ADDED: Optional grid path for optimal config
+        """Initialize DQN Agent with optimal hyperparameters.
         
         Args:
-            state_dim: Dimension of state space (8 for realistic environment)
-            action_dim: Number of actions (4 for movement)
-            gamma: Discount factor for future rewards
-            lr: Learning rate for neural network
-            batch_size: Size of training batches
-            buffer_size: Size of experience replay buffer
-            min_replay_size: Minimum experiences before training starts
-            target_update_freq: How often to update target network
-            epsilon_start: Initial exploration rate
-            epsilon_min: Minimum exploration rate
-            epsilon_decay: Decay rate for exploration
-            verbose: Whether to print training progress
+            grid_path: Optional path to grid file for automatic optimal config selection
+            Other parameters: If None, will use optimal values from hyperparameter search
         """
         super().__init__(state_dim, action_dim, state_type)
         
-        # Hyperparameters
-        self.gamma = gamma
-        self.lr = lr
-        self.batch_size = batch_size
+        # ADDED: Get optimal configuration
+        optimal_config = self._get_optimal_config(grid_path)
+        
+        # UPDATED: Use optimal hyperparameters if not specified
+        self.gamma = gamma if gamma is not None else optimal_config['gamma']
+        self.lr = lr if lr is not None else optimal_config['lr']
+        self.batch_size = batch_size if batch_size is not None else optimal_config['batch_size']
+        self.buffer_size = buffer_size if buffer_size is not None else optimal_config['buffer_size']
+        self.target_update_freq = target_update_freq if target_update_freq is not None else optimal_config['target_update_freq']
+        self.epsilon_min = epsilon_min if epsilon_min is not None else optimal_config['epsilon_min']
+        self.epsilon_decay = epsilon_decay if epsilon_decay is not None else optimal_config['epsilon_decay']
+        
         self.min_replay_size = min_replay_size
-        self.target_update_freq = target_update_freq
         self.verbose = verbose
         
         # Experience replay buffer
-        self.buffer_size = buffer_size
-        self.replay_buffer = deque(maxlen=buffer_size)
+        self.replay_buffer = deque(maxlen=self.buffer_size)
         
         # Device configuration
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         if self.verbose:
             print(f"DQN Agent using device: {self.device}")
+            if any(param is None for param in [gamma, lr, batch_size, buffer_size, target_update_freq, epsilon_min, epsilon_decay]):
+                print(f"Using optimal hyperparameters: lr={self.lr}, batch_size={self.batch_size}")
         
         # Neural networks
         self.q_net = DQNetwork(state_dim, action_dim).to(self.device)
@@ -86,13 +106,11 @@ class DQNAgent(BaseAgent):
         # Initialize target network with same weights as main network
         self.target_q_net.load_state_dict(self.q_net.state_dict())
         
-        # Optimizer
+        # Optimizer with optimal learning rate
         self.optimizer = optim.Adam(self.q_net.parameters(), lr=self.lr)
         
         # Exploration parameters
         self.epsilon = epsilon_start
-        self.epsilon_min = epsilon_min
-        self.epsilon_decay = epsilon_decay
         
         # Training tracking
         self.training_steps = 0
@@ -103,16 +121,20 @@ class DQNAgent(BaseAgent):
             print(f"DQN Agent initialized with {state_dim}D realistic state space")
             print(f"State features: position(2) + clearance(4) + mission(2) = {state_dim}D")
     
-    def take_training_action(self, state, training=True):
-        """Take action using epsilon-greedy policy.
+    def _get_optimal_config(self, grid_path):
+        """ADDED: Get optimal configuration based on grid path."""
+        config = self.OPTIMAL_CONFIGS['default'].copy()
         
-        Args:
-            state: Current state (8D vector or compatible format)
-            training: Whether in training mode (affects exploration)
-            
-        Returns:
-            action: Integer action in [0, 3]
-        """
+        if grid_path is not None:
+            grid_name = str(grid_path).lower()
+            # Apply grid-specific overrides
+            if 'maze' in grid_name or 'challenge' in grid_name:
+                config.update(self.OPTIMAL_CONFIGS['maze'])
+        
+        return config
+    
+    def take_training_action(self, state, training=True):
+        """Take action using epsilon-greedy policy."""
         state = self.preprocess_state(state)
         
         # Epsilon-greedy action selection
@@ -130,26 +152,11 @@ class DQNAgent(BaseAgent):
             return action
         
     def take_action(self, state):
-        """Take action using current policy (for evaluation).
-        
-        Args:
-            state: Current state (8D vector or compatible format)
-            
-        Returns:
-            action: Integer action in [0, 3]
-        """
+        """Take action using current policy (for evaluation)."""
         return self.take_training_action(state, training=False)
     
     def update(self, state, reward, action, next_state=None, done=False):
-        """Update the agent with new experience.
-        
-        Args:
-            state: Current state
-            reward: Reward received
-            action: Action taken
-            next_state: Next state
-            done: Whether episode terminated
-        """
+        """Update the agent with new experience."""
         # Preprocess states
         if next_state is not None:
             state = self.preprocess_state(state)
@@ -165,15 +172,14 @@ class DQNAgent(BaseAgent):
         # Train the network
         self._train_step()
         
-        # Update target network periodically
+        # Update target network periodically with optimal frequency
         self.training_steps += 1
         if self.training_steps % self.target_update_freq == 0:
             self.target_q_net.load_state_dict(self.q_net.state_dict())
-            # Reduced verbosity: only print every 5 target updates and only if verbose
             if self.verbose and self.training_steps % (self.target_update_freq * 5) == 0:
                 print(f"Target network updated at step {self.training_steps}")
         
-        # Decay epsilon at episode end
+        # Decay epsilon at episode end with optimal schedule
         if done:
             self.episode_count += 1
             if self.epsilon > self.epsilon_min:
@@ -186,8 +192,8 @@ class DQNAgent(BaseAgent):
                       f"avg_loss={avg_loss:.4f}, buffer_size={len(self.replay_buffer)}")
     
     def _train_step(self):
-        """Perform one training step on a batch of experiences."""
-        # Sample random batch from replay buffer
+        """Perform one training step on a batch of experiences with optimal batch size."""
+        # Sample optimal batch size from replay buffer
         batch = random.sample(self.replay_buffer, self.batch_size)
         states, actions, rewards, next_states, dones = zip(*batch)
         

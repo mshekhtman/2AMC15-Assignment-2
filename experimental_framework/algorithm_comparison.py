@@ -1,6 +1,6 @@
 """
 Algorithm comparison framework for Assignment 2.
-Compares DQN baseline with advanced RL algorithms.
+Compares DQN baseline with advanced RL algorithms including PPO.
 """
 import numpy as np
 import torch
@@ -128,6 +128,10 @@ class DoubleDQNAgent(BaseAgent):
         
         self.losses.append(loss.item())
 
+    def reset_episode(self):
+        """Reset episode state."""
+        pass
+
 
 class DuelingDQNAgent(BaseAgent):
     """Dueling DQN implementation for better value estimation."""
@@ -228,6 +232,10 @@ class DuelingDQNAgent(BaseAgent):
         
         self.losses.append(loss.item())
 
+    def reset_episode(self):
+        """Reset episode state."""
+        pass
+
 
 class AlgorithmComparison:
     """Framework for comparing different RL algorithms."""
@@ -241,21 +249,16 @@ class AlgorithmComparison:
     def get_algorithms(self):
         """Define algorithms to compare."""
         from agents.DQN_agent import DQNAgent
-        from agents.heuristic_agent import HeuristicAgent
         from agents.random_agent import RandomAgent
-        # TODO: Import PPO agent when implemented
-        # from agents.PPO_agent import PPOAgent
+        from agents.PPO_agent import PPOAgent  # Import PPO agent
         
         algorithms = {
             'Random': RandomAgent,
-            'Heuristic': HeuristicAgent, 
             'DQN': DQNAgent,
             'Double DQN': DoubleDQNAgent,
-            'Dueling DQN': DuelingDQNAgent
+            'Dueling DQN': DuelingDQNAgent,
+            'PPO': PPOAgent  # Add PPO to comparison
         }
-        
-        # TODO: Add PPO when available
-        # algorithms['PPO'] = PPOAgent
         
         return algorithms
     
@@ -281,22 +284,24 @@ class AlgorithmComparison:
                     state_representation='continuous_vector'
                 )
                 
-                # Initialize agent
-                if alg_name in ['Random', 'Heuristic']:
+                # Initialize agent with grid-specific optimal hyperparameters
+                if alg_name == 'Random':
                     agent = alg_class()
-                # TODO: Add PPO initialization when implemented
-                # elif alg_name == 'PPO':
-                #     agent = alg_class(
-                #         state_dim=8, 
-                #         action_dim=4,
-                #         lr=3e-4,  # Typical PPO learning rate
-                #         gamma=0.99,
-                #         clip_epsilon=0.2,  # PPO clipping parameter
-                #         value_coef=0.5,    # Value function coefficient
-                #         entropy_coef=0.01  # Entropy regularization
-                #     )
+                elif alg_name == 'PPO':
+                    # PPO with grid-specific optimal hyperparameters
+                    agent = alg_class(
+                        state_dim=8, 
+                        action_dim=4,
+                        grid_path=self.base_config['grid_path'],  # Automatic optimal config
+                        verbose=False  # Keep quiet during comparison
+                    )
                 else:
-                    agent = alg_class(state_dim=8, action_dim=4)
+                    # DQN variants with optimal hyperparameters
+                    agent = alg_class(
+                        state_dim=8, 
+                        action_dim=4,
+                        grid_path=self.base_config['grid_path']  # For DQN optimal config
+                    )
                 
                 # Run training
                 run_results = self._run_single_experiment(env, agent, episodes, alg_name)
@@ -321,6 +326,10 @@ class AlgorithmComparison:
             episode_reward = 0
             episode_length = 0
             
+            # Reset episode state for agents that need it
+            if hasattr(agent, 'reset_episode'):
+                agent.reset_episode()
+            
             for step in range(1000):
                 if hasattr(agent, 'take_training_action'):
                     action = agent.take_training_action(state, training=True)
@@ -344,7 +353,7 @@ class AlgorithmComparison:
             episode_lengths.append(episode_length)
             
             # Periodic evaluation for learning algorithms
-            if episode % 20 == 0 and hasattr(agent, 'take_action') and alg_name not in ['Random', 'Heuristic']:
+            if episode % 20 == 0 and hasattr(agent, 'take_action') and alg_name != 'Random':
                 eval_reward = self._evaluate_agent(env, agent)
                 evaluation_rewards.append(eval_reward)
         
@@ -382,6 +391,10 @@ class AlgorithmComparison:
         for _ in range(eval_episodes):
             state = env.reset()
             episode_reward = 0
+            
+            # Reset episode state for agents that need it
+            if hasattr(agent, 'reset_episode'):
+                agent.reset_episode()
             
             for step in range(1000):
                 action = agent.take_action(state)
@@ -426,9 +439,30 @@ class AlgorithmComparison:
         # Print summary table
         print(f"\n{'Algorithm':<15} {'Mean Reward':<12} {'Success Rate':<12} {'Final Eval':<12}")
         print("-" * 60)
-        for alg_name, metrics in summary.items():
+        
+        # Sort algorithms by final evaluation performance
+        sorted_algs = sorted(summary.items(), key=lambda x: x[1]['final_eval_avg'], reverse=True)
+        
+        for alg_name, metrics in sorted_algs:
             print(f"{alg_name:<15} {metrics['mean_reward_avg']:<12.1f} "
                   f"{metrics['success_rate_avg']:<12.1%} {metrics['final_eval_avg']:<12.1f}")
+        
+        # Print performance insights
+        best_alg = sorted_algs[0]
+        print(f"\n🏆 Best performing algorithm: {best_alg[0]}")
+        print(f"   Final evaluation: {best_alg[1]['final_eval_avg']:.1f}")
+        print(f"   Success rate: {best_alg[1]['success_rate_avg']:.1%}")
+        
+        # Compare PPO vs DQN if both present
+        if 'PPO' in summary and 'DQN' in summary:
+            ppo_performance = summary['PPO']['final_eval_avg']
+            dqn_performance = summary['DQN']['final_eval_avg']
+            improvement = ((ppo_performance - dqn_performance) / abs(dqn_performance)) * 100
+            
+            if improvement > 0:
+                print(f"📈 PPO outperforms DQN by {improvement:.1f}%")
+            else:
+                print(f"📉 DQN outperforms PPO by {abs(improvement):.1f}%")
     
     def _create_comparison_plots(self):
         """Create visualization plots comparing algorithms."""
@@ -437,7 +471,11 @@ class AlgorithmComparison:
         
         # Plot 1: Learning curves
         plt.subplot(2, 3, 1)
-        for alg_name, runs in self.results.items():
+        colors = ['red', 'blue', 'green', 'orange', 'purple']
+        color_map = {}
+        
+        for i, (alg_name, runs) in enumerate(self.results.items()):
+            color_map[alg_name] = colors[i % len(colors)]
             all_rewards = []
             max_episodes = max(len(run['episode_rewards']) for run in runs)
             
@@ -451,11 +489,16 @@ class AlgorithmComparison:
                 else:
                     all_rewards.append(np.nan)
             
-            plt.plot(all_rewards, label=alg_name, alpha=0.8)
+            # Smooth the curve with rolling average
+            if len(all_rewards) > 10:
+                smoothed = pd.Series(all_rewards).rolling(window=10, center=True).mean()
+                plt.plot(smoothed, label=alg_name, alpha=0.8, color=color_map[alg_name], linewidth=2)
+            else:
+                plt.plot(all_rewards, label=alg_name, alpha=0.8, color=color_map[alg_name], linewidth=2)
         
         plt.xlabel('Episode')
         plt.ylabel('Reward')
-        plt.title('Learning Curves Comparison')
+        plt.title('Learning Curves Comparison (Smoothed)')
         plt.legend()
         plt.grid(True, alpha=0.3)
         
@@ -467,7 +510,8 @@ class AlgorithmComparison:
         success_stds = [np.std([run['success_rate'] for run in runs]) 
                        for runs in self.results.values()]
         
-        plt.bar(alg_names, success_rates, yerr=success_stds, capsize=5)
+        colors_list = [color_map[name] for name in alg_names]
+        plt.bar(alg_names, success_rates, yerr=success_stds, capsize=5, color=colors_list, alpha=0.7)
         plt.xlabel('Algorithm')
         plt.ylabel('Success Rate')
         plt.title('Success Rate Comparison')
@@ -481,7 +525,7 @@ class AlgorithmComparison:
         mean_stds = [np.std([run['mean_reward'] for run in runs]) 
                     for runs in self.results.values()]
         
-        plt.bar(alg_names, mean_rewards, yerr=mean_stds, capsize=5)
+        plt.bar(alg_names, mean_rewards, yerr=mean_stds, capsize=5, color=colors_list, alpha=0.7)
         plt.xlabel('Algorithm')
         plt.ylabel('Mean Episode Reward')
         plt.title('Mean Reward Comparison')
@@ -495,7 +539,7 @@ class AlgorithmComparison:
         final_stds = [np.std([run['final_evaluation'] for run in runs]) 
                      for runs in self.results.values()]
         
-        plt.bar(alg_names, final_evals, yerr=final_stds, capsize=5)
+        plt.bar(alg_names, final_evals, yerr=final_stds, capsize=5, color=colors_list, alpha=0.7)
         plt.xlabel('Algorithm')
         plt.ylabel('Final Evaluation Score')
         plt.title('Final Performance Comparison')
@@ -507,7 +551,7 @@ class AlgorithmComparison:
         convergence_episodes = [np.mean([run['convergence_episode'] for run in runs]) 
                                for runs in self.results.values()]
         
-        plt.bar(alg_names, convergence_episodes)
+        plt.bar(alg_names, convergence_episodes, color=colors_list, alpha=0.7)
         plt.xlabel('Algorithm')
         plt.ylabel('Episodes to Convergence')
         plt.title('Convergence Speed Comparison')
@@ -519,7 +563,7 @@ class AlgorithmComparison:
         reward_variances = [np.mean([run['std_reward'] for run in runs]) 
                            for runs in self.results.values()]
         
-        plt.bar(alg_names, reward_variances)
+        plt.bar(alg_names, reward_variances, color=colors_list, alpha=0.7)
         plt.xlabel('Algorithm')
         plt.ylabel('Reward Standard Deviation')
         plt.title('Training Stability Comparison')
@@ -529,16 +573,149 @@ class AlgorithmComparison:
         plt.tight_layout()
         plt.savefig(self.experiment_dir / "algorithm_comparison.png", dpi=150, bbox_inches='tight')
         plt.close()
+        
+        print(f"📊 Comparison plots saved to: {self.experiment_dir / 'algorithm_comparison.png'}")
 
 
 # Example usage
 if __name__ == "__main__":
-    base_config = {
-        'grid_path': Path('grid_configs/A1_grid.npy'),
-        'sigma': 0.1,
-        'agent_start_pos': (3, 11),
-        'random_seed': 42
-    }
+    # Test on ALL Assignment 2 grids with CORRECT starting positions
+    assignment2_grids = [
+        {
+            'name': 'Assignment2 Main',
+            'config': {
+                'grid_path': Path('grid_configs/assignment2_main.npy'),
+                'sigma': 0.1,
+                'agent_start_pos': (3, 9),  # Correct starting position
+                'random_seed': 42
+            }
+        },
+        {
+            'name': 'Corridor Test',
+            'config': {
+                'grid_path': Path('grid_configs/corridor_test.npy'),
+                'sigma': 0.1,
+                'agent_start_pos': (2, 4),  # Correct starting position
+                'random_seed': 42
+            }
+        },
+        {
+            'name': 'Maze Challenge',
+            'config': {
+                'grid_path': Path('grid_configs/maze_challenge.npy'),
+                'sigma': 0.1,
+                'agent_start_pos': (2, 6),  # Correct starting position
+                'random_seed': 42
+            }
+        },
+        {
+            'name': 'Open Space',
+            'config': {
+                'grid_path': Path('grid_configs/open_space.npy'),
+                'sigma': 0.1,
+                'agent_start_pos': (2, 2),  # Correct starting position
+                'random_seed': 42
+            }
+        },
+        {
+            'name': 'Simple Restaurant',
+            'config': {
+                'grid_path': Path('grid_configs/simple_restaurant.npy'),
+                'sigma': 0.1,
+                'agent_start_pos': (2, 8),  # Correct starting position
+                'random_seed': 42
+            }
+        }
+    ]
     
-    comparison = AlgorithmComparison(base_config)
-    results = comparison.run_comparison(episodes=100, num_runs=3)
+    print("🚀 COMPREHENSIVE ASSIGNMENT 2 ALGORITHM COMPARISON")
+    print("=" * 60)
+    print(f"Testing {len(assignment2_grids)} Assignment 2 grids:")
+    for grid in assignment2_grids:
+        print(f"  • {grid['name']}")
+    print(f"Algorithms: Random, DQN, Double DQN, Dueling DQN, PPO")
+    print(f"Each algorithm: 100 episodes × 3 runs = 300 episodes per grid")
+    print("=" * 60)
+    
+    # Store all results for final summary
+    all_results = {}
+    
+    for grid_test in assignment2_grids:
+        print(f"\n🔬 Testing on {grid_test['name']}")
+        print("=" * 50)
+        
+        comparison = AlgorithmComparison(grid_test['config'])
+        results = comparison.run_comparison(episodes=100, num_runs=3)
+        
+        # Store results for final analysis
+        all_results[grid_test['name']] = results
+        
+        print(f"✅ Completed testing on {grid_test['name']}")
+    
+    # Create comprehensive final summary
+    print(f"\n📊 FINAL ASSIGNMENT 2 ALGORITHM COMPARISON SUMMARY")
+    print("=" * 70)
+    
+    # Calculate overall performance across all grids
+    algorithms = ['Random', 'DQN', 'Double DQN', 'Dueling DQN', 'PPO']
+    overall_performance = {}
+    
+    for alg in algorithms:
+        success_rates = []
+        final_evals = []
+        
+        for grid_name, grid_results in all_results.items():
+            if alg in grid_results:
+                alg_runs = grid_results[alg]
+                success_rates.extend([run['success_rate'] for run in alg_runs])
+                final_evals.extend([run['final_evaluation'] for run in alg_runs])
+        
+        if success_rates and final_evals:
+            overall_performance[alg] = {
+                'avg_success_rate': np.mean(success_rates),
+                'avg_final_eval': np.mean(final_evals),
+                'success_rate_std': np.std(success_rates),
+                'final_eval_std': np.std(final_evals)
+            }
+    
+    # Print overall ranking
+    if overall_performance:
+        print(f"\n🏆 OVERALL ALGORITHM RANKING (across all Assignment 2 grids):")
+        print("-" * 70)
+        
+        # Sort by final evaluation performance
+        sorted_overall = sorted(overall_performance.items(), 
+                               key=lambda x: x[1]['avg_final_eval'], reverse=True)
+        
+        print(f"{'Rank':<4} {'Algorithm':<15} {'Avg Success':<12} {'Avg Final Eval':<15}")
+        print("-" * 70)
+        
+        for rank, (alg_name, metrics) in enumerate(sorted_overall, 1):
+            print(f"{rank:<4} {alg_name:<15} "
+                  f"{metrics['avg_success_rate']:<12.1%} "
+                  f"{metrics['avg_final_eval']:<15.1f}")
+        
+        # Print key insights
+        best_alg = sorted_overall[0]
+        print(f"\n🥇 Best Overall Algorithm: {best_alg[0]}")
+        print(f"   Average Success Rate: {best_alg[1]['avg_success_rate']:.1%}")
+        print(f"   Average Final Evaluation: {best_alg[1]['avg_final_eval']:.1f}")
+        
+        # Grid-specific best performers
+        print(f"\n🎯 Best Algorithm Per Grid:")
+        for grid_name, grid_results in all_results.items():
+            grid_best = None
+            best_performance = float('-inf')
+            
+            for alg_name, alg_runs in grid_results.items():
+                avg_performance = np.mean([run['final_evaluation'] for run in alg_runs])
+                if avg_performance > best_performance:
+                    best_performance = avg_performance
+                    grid_best = alg_name
+            
+            if grid_best:
+                avg_success = np.mean([run['success_rate'] for run in grid_results[grid_best]])
+                print(f"   {grid_name}: {grid_best} ({avg_success:.1%} success, {best_performance:.1f} eval)")
+    
+    print(f"\n🎉 Assignment 2 Algorithm Comparison Complete!")
+    print(f"Results saved in individual experiment directories.")

@@ -73,9 +73,9 @@ class SimpleAgentTester:
         
         # Available agents including PPO
         self.agents = {
-            #'random': RandomAgent,
+            'random': RandomAgent,
             #'heuristic': HeuristicAgent,
-            #'dqn': DQNAgent,
+            'dqn': DQNAgent,
             'ppo': None  # Will be imported conditionally
         }
         
