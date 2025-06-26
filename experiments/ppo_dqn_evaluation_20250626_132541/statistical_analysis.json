@@ -1,0 +1,47 @@
+{
+  "mean_reward": {
+    "pairwise_tests": {
+      "PPO_vs_DQN": {
+        "statistic": "-13.329391846010962",
+        "p_value": "9.590725802338757e-07",
+        "significant": true
+      }
+    }
+  },
+  "success_rate": {
+    "pairwise_tests": {
+      "PPO_vs_DQN": {
+        "statistic": "-52.40672777687109",
+        "p_value": "1.9479332982359546e-11",
+        "significant": true
+      }
+    }
+  },
+  "sample_efficiency": {
+    "pairwise_tests": {
+      "PPO_vs_DQN": {
+        "statistic": "12.43106035546559",
+        "p_value": "1.637590222405845e-06",
+        "significant": true
+      }
+    }
+  },
+  "asymptotic_performance": {
+    "pairwise_tests": {
+      "PPO_vs_DQN": {
+        "statistic": "-45.14244413208058",
+        "p_value": "6.403413843189013e-11",
+        "significant": true
+      }
+    }
+  },
+  "stability_metric": {
+    "pairwise_tests": {
+      "PPO_vs_DQN": {
+        "statistic": "-1.135547118041658",
+        "p_value": "0.2890187810896989",
+        "significant": false
+      }
+    }
+  }
+}

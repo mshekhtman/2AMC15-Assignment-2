@@ -1,13 +1,13 @@
 {
   "current_hyperparameters": {
-    "lr": 0.002,
+    "lr": 0.001,
     "gamma": 0.99,
     "gae_lambda": 0.95,
-    "clip_eps": 0.25,
+    "clip_eps": 0.2,
     "entropy_coef": 0.03,
-    "value_coef": 1.0,
+    "value_coef": 0.5,
     "rollout_steps": 64,
-    "ppo_epochs": 8,
+    "ppo_epochs": 4,
     "batch_size": 32,
     "hidden_dim": 128
   },

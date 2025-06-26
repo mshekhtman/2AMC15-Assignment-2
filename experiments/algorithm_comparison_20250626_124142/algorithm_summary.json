@@ -1,0 +1,47 @@
+{
+  "Random": {
+    "mean_reward_avg": -342.2191666666667,
+    "mean_reward_std": 33.634489821544136,
+    "success_rate_avg": 0.9833333333333334,
+    "success_rate_std": 0.012472191289246483,
+    "final_eval_avg": -280.46666666666664,
+    "final_eval_std": 70.04629818119504,
+    "convergence_avg": 20.0
+  },
+  "DQN": {
+    "mean_reward_avg": -75.38,
+    "mean_reward_std": 22.370146773471706,
+    "success_rate_avg": 0.98,
+    "success_rate_std": 0.008164965809277268,
+    "final_eval_avg": -20.59166666666667,
+    "final_eval_std": 100.4471198635824,
+    "convergence_avg": 20.0
+  },
+  "Double DQN": {
+    "mean_reward_avg": -118.1825,
+    "mean_reward_std": 1.5995950008257256,
+    "success_rate_avg": 0.9966666666666667,
+    "success_rate_std": 0.004714045207910321,
+    "final_eval_avg": 68.69166666666666,
+    "final_eval_std": 17.907869933511233,
+    "convergence_avg": 20.0
+  },
+  "Dueling DQN": {
+    "mean_reward_avg": -147.345,
+    "mean_reward_std": 6.155398375951526,
+    "success_rate_avg": 0.9866666666666667,
+    "success_rate_std": 0.004714045207910321,
+    "final_eval_avg": -242.91666666666666,
+    "final_eval_std": 210.27597177413202,
+    "convergence_avg": 20.0
+  },
+  "PPO": {
+    "mean_reward_avg": -358.1191666666667,
+    "mean_reward_std": 32.58292659592681,
+    "success_rate_avg": 0.98,
+    "success_rate_std": 0.008164965809277268,
+    "final_eval_avg": -312.3333333333333,
+    "final_eval_std": 55.48160480936201,
+    "convergence_avg": 20.333333333333332
+  }
+}

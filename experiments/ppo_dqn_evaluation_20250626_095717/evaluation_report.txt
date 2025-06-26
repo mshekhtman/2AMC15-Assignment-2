@@ -1,0 +1,43 @@
+================================================================================
+PPO vs DQN EVALUATION REPORT
+================================================================================
+
+EXECUTIVE SUMMARY
+----------------------------------------
+Mean Reward: DQN performs better
+  PPO: -782.96, DQN: -108.47
+
+Success Rate: DQN performs better
+  PPO: 0.00, DQN: 0.97
+
+Sample Efficiency: DQN performs better
+  PPO: 100.00, DQN: 5.80
+
+Asymptotic Performance: DQN performs better
+  PPO: -750.90, DQN: -8.15
+
+DETAILED RESULTS
+----------------------------------------
+
+PPO
+---
+Mean Reward: -782.96 ± 81.74
+Success Rate: 0.00 ± 0.00
+Sample Efficiency: 100.00 ± 0.00
+Asymptotic Performance: -750.90 ± 37.32
+
+DQN
+---
+Mean Reward: -108.47 ± 232.94
+Success Rate: 0.97 ± 0.06
+Sample Efficiency: 5.80 ± 9.11
+Asymptotic Performance: -8.15 ± 51.66
+
+
+STATISTICAL SIGNIFICANCE
+----------------------------------------
+Mean Reward: statistically significant (p=0.0006)
+Success Rate: statistically significant (p=0.0000)
+Sample Efficiency: statistically significant (p=0.0000)
+Asymptotic Performance: statistically significant (p=0.0000)
+Stability Metric: not statistically significant (p=0.3124)
