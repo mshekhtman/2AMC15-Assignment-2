@@ -1,0 +1,297 @@
+{
+  "mean_reward": {
+    "anova": {
+      "f_statistic": "66.18329221488845",
+      "p_value": "3.7172231222117504e-07",
+      "significant": true
+    },
+    "pairwise_tests": {
+      "Random_vs_DQN": {
+        "statistic": "-8.41459773890059",
+        "p_value": "0.001091929446606135",
+        "significant": true
+      },
+      "Random_vs_Double DQN": {
+        "statistic": "1.3272995581985374",
+        "p_value": "0.2550991624120352",
+        "significant": false
+      },
+      "Random_vs_Dueling DQN": {
+        "statistic": "1.2086038765193632",
+        "p_value": "0.2933739270172504",
+        "significant": false
+      },
+      "Random_vs_PPO": {
+        "statistic": "-1.4510659218506592",
+        "p_value": "0.22038498211915283",
+        "significant": false
+      },
+      "DQN_vs_Double DQN": {
+        "statistic": "8.615592878082644",
+        "p_value": "0.0009976503960893175",
+        "significant": true
+      },
+      "DQN_vs_Dueling DQN": {
+        "statistic": "8.591733885247448",
+        "p_value": "0.0010082994280773182",
+        "significant": true
+      },
+      "DQN_vs_PPO": {
+        "statistic": "7.933934088205634",
+        "p_value": "0.0013663005679449218",
+        "significant": true
+      },
+      "Double DQN_vs_Dueling DQN": {
+        "statistic": "0.06938992017014604",
+        "p_value": "0.948009698624638",
+        "significant": false
+      },
+      "Double DQN_vs_PPO": {
+        "statistic": "-2.291254332597448",
+        "p_value": "0.08374130299107653",
+        "significant": false
+      },
+      "Dueling DQN_vs_PPO": {
+        "statistic": "-2.1880626360887883",
+        "p_value": "0.09389494905520741",
+        "significant": false
+      }
+    }
+  },
+  "success_rate": {
+    "anova": {
+      "f_statistic": "187.8876221498395",
+      "p_value": "2.3167504003615296e-09",
+      "significant": true
+    },
+    "pairwise_tests": {
+      "Random_vs_DQN": {
+        "statistic": "-38.74135848344575",
+        "p_value": "2.651705433629728e-06",
+        "significant": true
+      },
+      "Random_vs_Double DQN": {
+        "statistic": "0.44172610429938536",
+        "p_value": "0.681517158213101",
+        "significant": false
+      },
+      "Random_vs_Dueling DQN": {
+        "statistic": "1.3228756555322945",
+        "p_value": "0.25643496454832665",
+        "significant": false
+      },
+      "Random_vs_PPO": {
+        "statistic": "8.148227845444467",
+        "p_value": "0.001234530804597324",
+        "significant": true
+      },
+      "DQN_vs_Double DQN": {
+        "statistic": "20.494136121940233",
+        "p_value": "3.347885850275534e-05",
+        "significant": true
+      },
+      "DQN_vs_Dueling DQN": {
+        "statistic": "18.91871852023178",
+        "p_value": "4.597673391727013e-05",
+        "significant": true
+      },
+      "DQN_vs_PPO": {
+        "statistic": "26.368738021141358",
+        "p_value": "1.2292529781953331e-05",
+        "significant": true
+      },
+      "Double DQN_vs_Dueling DQN": {
+        "statistic": "0.7293249574894727",
+        "p_value": "0.5062137701477647",
+        "significant": false
+      },
+      "Double DQN_vs_PPO": {
+        "statistic": "5.752237416355277",
+        "p_value": "0.004529000918585474",
+        "significant": true
+      },
+      "Dueling DQN_vs_PPO": {
+        "statistic": "4.596194077712559",
+        "p_value": "0.010059710280046907",
+        "significant": true
+      }
+    }
+  },
+  "sample_efficiency": {
+    "anova": {
+      "f_statistic": "13.254150390624984",
+      "p_value": "0.0005239331087321424",
+      "significant": true
+    },
+    "pairwise_tests": {
+      "Random_vs_DQN": {
+        "statistic": "3.640625",
+        "p_value": "0.021952520842848645",
+        "significant": true
+      },
+      "Random_vs_Double DQN": {
+        "statistic": "nan",
+        "p_value": "nan",
+        "significant": false
+      },
+      "Random_vs_Dueling DQN": {
+        "statistic": "nan",
+        "p_value": "nan",
+        "significant": false
+      },
+      "Random_vs_PPO": {
+        "statistic": "nan",
+        "p_value": "nan",
+        "significant": false
+      },
+      "DQN_vs_Double DQN": {
+        "statistic": "-3.640625",
+        "p_value": "0.021952520842848645",
+        "significant": true
+      },
+      "DQN_vs_Dueling DQN": {
+        "statistic": "-3.640625",
+        "p_value": "0.021952520842848645",
+        "significant": true
+      },
+      "DQN_vs_PPO": {
+        "statistic": "-3.640625",
+        "p_value": "0.021952520842848645",
+        "significant": true
+      },
+      "Double DQN_vs_Dueling DQN": {
+        "statistic": "nan",
+        "p_value": "nan",
+        "significant": false
+      },
+      "Double DQN_vs_PPO": {
+        "statistic": "nan",
+        "p_value": "nan",
+        "significant": false
+      },
+      "Dueling DQN_vs_PPO": {
+        "statistic": "nan",
+        "p_value": "nan",
+        "significant": false
+      }
+    }
+  },
+  "asymptotic_performance": {
+    "anova": {
+      "f_statistic": "295.8972834518766",
+      "p_value": "2.45942849936815e-10",
+      "significant": true
+    },
+    "pairwise_tests": {
+      "Random_vs_DQN": {
+        "statistic": "-59.820019836730374",
+        "p_value": "4.6768816145120527e-07",
+        "significant": true
+      },
+      "Random_vs_Double DQN": {
+        "statistic": "3.0498685909897114",
+        "p_value": "0.038033119822286646",
+        "significant": true
+      },
+      "Random_vs_Dueling DQN": {
+        "statistic": "0.3016385364723556",
+        "p_value": "0.7779593687554628",
+        "significant": false
+      },
+      "Random_vs_PPO": {
+        "statistic": "-4.891655640405578",
+        "p_value": "0.008092398864700066",
+        "significant": true
+      },
+      "DQN_vs_Double DQN": {
+        "statistic": "38.95954115061742",
+        "p_value": "2.5929301527130305e-06",
+        "significant": true
+      },
+      "DQN_vs_Dueling DQN": {
+        "statistic": "19.73569123560046",
+        "p_value": "3.888166038402889e-05",
+        "significant": true
+      },
+      "DQN_vs_PPO": {
+        "statistic": "39.62040931617185",
+        "p_value": "2.42456184768653e-06",
+        "significant": true
+      },
+      "Double DQN_vs_Dueling DQN": {
+        "statistic": "-1.010873522728951",
+        "p_value": "0.36925803367988513",
+        "significant": false
+      },
+      "Double DQN_vs_PPO": {
+        "statistic": "-5.51791498676682",
+        "p_value": "0.00526594722234226",
+        "significant": true
+      },
+      "Dueling DQN_vs_PPO": {
+        "statistic": "-1.9127076128191047",
+        "p_value": "0.1283448833615435",
+        "significant": false
+      }
+    }
+  },
+  "stability_metric": {
+    "anova": {
+      "f_statistic": "1.060579903581672",
+      "p_value": "0.4247954597638519",
+      "significant": false
+    },
+    "pairwise_tests": {
+      "Random_vs_DQN": {
+        "statistic": "-1.0286221149889179",
+        "p_value": "0.36178794139021725",
+        "significant": false
+      },
+      "Random_vs_Double DQN": {
+        "statistic": "0.577666922936394",
+        "p_value": "0.5944477649434934",
+        "significant": false
+      },
+      "Random_vs_Dueling DQN": {
+        "statistic": "-0.8902137796780037",
+        "p_value": "0.4236554698668741",
+        "significant": false
+      },
+      "Random_vs_PPO": {
+        "statistic": "1.4646088130115409",
+        "p_value": "0.21688464478359468",
+        "significant": false
+      },
+      "DQN_vs_Double DQN": {
+        "statistic": "1.0312516740793483",
+        "p_value": "0.36069259184484104",
+        "significant": false
+      },
+      "DQN_vs_Dueling DQN": {
+        "statistic": "1.0238014480474011",
+        "p_value": "0.3638036211993951",
+        "significant": false
+      },
+      "DQN_vs_PPO": {
+        "statistic": "1.035576193655074",
+        "p_value": "0.3588975702715791",
+        "significant": false
+      },
+      "Double DQN_vs_Dueling DQN": {
+        "statistic": "-2.395708811384025",
+        "p_value": "0.07470331196865435",
+        "significant": false
+      },
+      "Double DQN_vs_PPO": {
+        "statistic": "2.60766043573712",
+        "p_value": "0.05956626579784381",
+        "significant": false
+      },
+      "Dueling DQN_vs_PPO": {
+        "statistic": "3.458708985862554",
+        "p_value": "0.025848180218433315",
+        "significant": true
+      }
+    }
+  }
+}
