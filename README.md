@@ -64,7 +64,6 @@ Unlike traditional grid-based RL, our environment uses realistic robot sensors:
 - **PPO Agent**: Proximal Policy Optimization (coming soon)
 
 ### **Restaurant Grids**
-- `A1_grid.npy` - Main assignment grid
 - `open_space.npy` - Basic testing environment
 - `simple_restaurant.npy` - Core restaurant layout
 - `corridor_test.npy` - Navigation challenges
