@@ -447,7 +447,4 @@ CUDA_VISIBLE_DEVICES="" python train.py grid_configs/A1_grid.npy --agent_type dq
 ```bash
 # Sanity check
 python train.py grid_configs/A1_grid.npy --agent_type random --episodes 1 --agent_start_pos 3 11
-
-# Test all agents quickly
-python experimental_framework/test_all_agents.py --episodes 1
 ```
