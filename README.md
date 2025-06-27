@@ -47,6 +47,28 @@ pip install -r requirements.txt
 python world/create_restaurant_grids.py
 ```
 
+## Quick Demonstration (2-Hour Cap)
+
+This demonstration showcases all key implementations within 2 hours as required for assignment evaluation.
+
+```bash
+# Step 1: Test all agents (10 minutes)
+python train.py grid_configs/A2/open_space.npy --agent_type random --episodes 5 --no_gui
+python train.py grid_configs/A2/open_space.npy --agent_type dqn --episodes 10 --no_gui
+python train.py grid_configs/A2/open_space.npy --agent_type ppo --episodes 10 --no_gui
+
+# Step 2: Algorithm comparison (30 minutes)
+python experimental_framework/algorithm_comparison.py --quick
+
+# Step 3: Hyperparameter optimization demo (25 minutes)
+python experimental_framework/hyperparameter_tuner.py --quick --max_configs 5 --episodes 15
+
+# Step 4: Architecture ablation (20 minutes)
+python experimental_framework/ablation_studies.py --study architecture --quick --episodes 15
+
+# Expected results: DQN variants outperform PPO, statistical significance confirmed
+```
+
 ## Key Features
 
 ### **8D Realistic State Space**
@@ -347,16 +369,113 @@ python experimental_framework/ppo_hyperparameter_optimizer.py  # Environment-spe
 python train.py grid_configs/A1_grid.npy --agent_type heuristic --episodes 20 --agent_start_pos 3 11
 ```
 
-### **Experimental Framework Issues**
+## Full Experimental Suite (Unlimited Time)
+
+For reproducing the complete results presented in our research paper, use the comprehensive experimental framework. These experiments can take several hours to days depending on the scope.
+
+### **Complete Paper Reproduction**
 ```bash
-# Quick validation of experimental framework
-python experimental_framework/master_experiment_runner.py --quick --phase algorithms
+# Full experimental suite (matches paper results exactly)
+python experimental_framework/master_experiment_runner.py --grid grid_configs/A1_grid.npy
 
-# Memory issues with large experiments
-python experimental_framework/master_experiment_runner.py --quick  # Reduced parameters
+# Full mode parameters:
+# - 100 episodes per experiment
+# - 5 random seeds per comparison  
+# - 20 hyperparameter configurations
+# - All environments tested
+# - Complete statistical analysis
 
-# Missing experimental dependencies
-pip install -r requirements.txt
+# Expected runtime: 4-8 hours depending on hardware
+```
+
+### **Individual Experimental Phases**
+```bash
+# Phase 1: Comprehensive hyperparameter optimization
+python experimental_framework/master_experiment_runner.py --phase hyperparams
+# Runtime: ~2-3 hours
+
+# Phase 2: Multi-algorithm comparison with full statistics
+python experimental_framework/master_experiment_runner.py --phase algorithms  
+# Runtime: ~1-2 hours
+
+# Phase 3: Complete ablation studies
+python experimental_framework/master_experiment_runner.py --phase ablation
+# Runtime: ~1-2 hours
+
+# Phase 4: Advanced evaluation metrics
+python experimental_framework/master_experiment_runner.py --phase evaluation
+# Runtime: ~1 hour
+```
+
+### **Cross-Environment Analysis**
+```bash
+# Test all algorithms across all 5 environments
+for env in grid_configs/A2/open_space.npy grid_configs/A2/simple_restaurant.npy grid_configs/A2/corridor_test.npy grid_configs/A1_grid.npy grid_configs/A2/maze_challenge.npy; do
+    python experimental_framework/master_experiment_runner.py --grid $env
+done
+
+# Runtime: ~20-40 hours total
+```
+
+### **Publication-Quality Results**
+```bash
+# Generate all figures and tables from paper
+python experimental_framework/master_experiment_runner.py --grid grid_configs/A1_grid.npy
+
+# Outputs include:
+# - Statistical significance tests (ANOVA, t-tests)
+# - Learning curves with 95% confidence intervals  
+# - Cross-environment performance matrices
+# - Architecture sensitivity analysis
+# - Deployment recommendations
+# - Automated final analysis report
+```
+
+### **Result Organization**
+```
+experiments/master_run_YYYYMMDD_HHMMSS/
+├── hyperparameter_tuning/          # Phase 1: Optimization results
+│   ├── dqn_tuning_results.json
+│   ├── ppo_tuning_results.json
+│   └── optimization_plots/
+├── algorithm_comparison/            # Phase 2: Multi-algorithm analysis
+│   ├── performance_comparison.json
+│   ├── statistical_tests.json
+│   └── comparison_plots/
+├── ablation_studies/                # Phase 3: Component analysis
+│   ├── architecture_ablation.json
+│   ├── component_importance.json
+│   └── ablation_plots/
+├── comprehensive_evaluation/        # Phase 4: Advanced metrics
+│   ├── convergence_analysis.json
+│   ├── stability_metrics.json
+│   └── evaluation_plots/
+├── final_analysis_report.md         # Automated comprehensive summary
+└── experiment_config.json          # Configuration used
+```
+
+### **Hardware Recommendations**
+- **Minimum**: 8GB RAM, 4 CPU cores, ~6-8 hours for full suite
+- **Recommended**: 16GB RAM, 8+ CPU cores, GPU optional, ~4-6 hours
+- **Optimal**: 32GB RAM, 16+ CPU cores, GPU with CUDA, ~2-4 hours
+
+### **Reproducing Specific Paper Results**
+```bash
+# Table 2: PPO environment-specific configurations
+python experimental_framework/ppo_hyperparameter_optimizer.py --all_environments
+
+# Table 3: ANOVA statistical analysis  
+python experimental_framework/algorithm_comparison.py --runs 5 --statistical_tests
+
+# Table 4: Cross-environment performance comparison
+python experimental_framework/master_experiment_runner.py --grid grid_configs/A1_grid.npy
+
+# Table 5: Architecture ablation results
+python experimental_framework/ablation_studies.py --study architecture --all_configs
+
+# Figure 2 & 3: Learning curves and architecture comparison
+python experimental_framework/master_experiment_runner.py --grid grid_configs/A1_grid.npy
+# Plots automatically generated in experiments/*/plots/
 ```
 
 ### **Performance Debugging**
