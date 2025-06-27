@@ -52,10 +52,11 @@ python world/create_restaurant_grids.py
 This demonstration showcases all key implementations within 2 hours as required for assignment evaluation.
 
 ```bash
-# Step 1: Test all agents (10 minutes)
-python train.py grid_configs/A2/open_space.npy --agent_type random --episodes 5 --no_gui
-python train.py grid_configs/A2/open_space.npy --agent_type dqn --episodes 10 --no_gui
-python train.py grid_configs/A2/open_space.npy --agent_type ppo --episodes 10 --no_gui
+# Step 1: Test individual agents on Assignment 2 main grid (15 minutes)
+python train.py grid_configs/A2/assignment2_main.npy --agent_type random --episodes 5 --no_gui
+python train.py grid_configs/A2/assignment2_main.npy --agent_type heuristic --episodes 5 --no_gui
+python train.py grid_configs/A2/assignment2_main.npy --agent_type dqn --episodes 15 --no_gui
+python train.py grid_configs/A2/assignment2_main.npy --agent_type ppo --episodes 15 --no_gui
 
 # Step 2: Algorithm comparison (30 minutes)
 python experimental_framework/algorithm_comparison.py --quick
@@ -64,9 +65,25 @@ python experimental_framework/algorithm_comparison.py --quick
 python experimental_framework/hyperparameter_tuner.py --quick --max_configs 5 --episodes 15
 
 # Step 4: Architecture ablation (20 minutes)
-python experimental_framework/ablation_studies.py --study architecture --quick --episodes 15
+python experimental_framework/ablation_studies.py --quick --episodes 15
+
+# Step 5: Evaluation framework demo (15 minutes)
+python experimental_framework/evaluation_framework.py --quick
+
+# Step 6: Generate visualizations (10 minutes)
+python experimental_framework/learning_curves_generator.py
+python experimental_framework/network_vis.py
+python experimental_framework/cross_environment_performance.py
 
 # Expected results: DQN variants outperform PPO, statistical significance confirmed
+```
+
+**For comprehensive agent testing across all environments**, run individual combinations as needed:
+```bash
+# Test specific agent-environment combinations
+python train.py grid_configs/A2/open_space.npy --agent_type dqn --episodes 20 --no_gui
+python train.py grid_configs/A2/simple_restaurant.npy --agent_type ppo --episodes 25 --no_gui
+python train.py grid_configs/A2/corridor_test.npy --agent_type heuristic --episodes 10 --no_gui
 ```
 
 ## Key Features
@@ -119,28 +136,6 @@ Training Options:
   --iter INT             Max steps per episode (default: 1000)
 ```
 
-### **Comprehensive Experimental Framework**
-```bash
-# Run complete experimental suite
-python experimental_framework/master_experiment_runner.py --grid grid_configs/A1_grid.npy
-
-# Quick testing mode (reduced parameters)
-python experimental_framework/master_experiment_runner.py --quick
-
-# Run specific experimental phases
-python experimental_framework/master_experiment_runner.py --phase hyperparams
-python experimental_framework/master_experiment_runner.py --phase algorithms
-python experimental_framework/master_experiment_runner.py --phase ablation
-python experimental_framework/master_experiment_runner.py --phase evaluation
-
-# Configuration options
-python experimental_framework/master_experiment_runner.py \
-  --grid grid_configs/A2/simple_restaurant.npy \
-  --start_pos 5 5 \
-  --sigma 0.15 \
-  --seed 42
-```
-
 ### **Example Commands**
 
 #### **Development Testing**
@@ -152,23 +147,39 @@ python train.py grid_configs/A2/open_space.npy --agent_type heuristic --episodes
 python train.py grid_configs/A2/simple_restaurant.npy --agent_type dqn --episodes 30 --no_gui
 
 # PPO training
-python train.py grid_configs/A1_grid.npy --agent_type ppo --episodes 50 --no_gui
+python train.py grid_configs/A2/assignment2_main.npy --agent_type ppo --episodes 50 --no_gui
 
 # Performance comparison
-python train.py grid_configs/A1_grid.npy --agent_type heuristic --episodes 20 --agent_start_pos 3 11
-python train.py grid_configs/A1_grid.npy --agent_type dqn --episodes 50 --agent_start_pos 3 11
+python train.py grid_configs/A2/assignment2_main.npy --agent_type heuristic --episodes 20 --agent_start_pos 3 9
+python train.py grid_configs/A2/assignment2_main.npy --agent_type dqn --episodes 50 --agent_start_pos 3 9
 ```
 
 #### **Model Management**
 ```bash
 # Train and save DQN model
-python train.py grid_configs/A1_grid.npy --agent_type dqn --episodes 100 --save_agent "my_model.pth" --no_gui
+python train.py grid_configs/A2/assignment2_main.npy --agent_type dqn --episodes 100 --save_agent "my_model.pth" --no_gui
 
 # Load and continue training
-python train.py grid_configs/A1_grid.npy --agent_type dqn --episodes 50 --load_agent "my_model.pth" --no_gui
+python train.py grid_configs/A2/assignment2_main.npy --agent_type dqn --episodes 50 --load_agent "my_model.pth" --no_gui
 
 # Evaluate saved model
-python train.py grid_configs/A1_grid.npy --agent_type dqn --episodes 1 --load_agent "my_model.pth" --agent_start_pos 3 11
+python train.py grid_configs/A2/assignment2_main.npy --agent_type dqn --episodes 1 --load_agent "my_model.pth" --agent_start_pos 3 9
+```
+
+## Experimental Framework
+
+### **Individual Experiment Scripts**
+
+#### **Algorithm Comparison**
+```bash
+# Compare all algorithms with statistical analysis
+python experimental_framework/algorithm_comparison.py
+
+# Options:
+# --quick              Reduced parameters for quick testing
+# --runs N             Number of independent runs (default: 5)
+# --episodes N         Episodes per run (default: 100)
+# --environments LIST  Specific environments to test
 ```
 
 #### **Hyperparameter Optimization**
@@ -176,27 +187,62 @@ python train.py grid_configs/A1_grid.npy --agent_type dqn --episodes 1 --load_ag
 # DQN hyperparameter tuning
 python experimental_framework/hyperparameter_tuner.py
 
+# Options:
+# --quick              Quick mode with fewer configurations
+# --max_configs N      Maximum configurations to test
+# --episodes N         Episodes per configuration
+# --method {random,grid}  Search strategy
+
 # PPO environment-specific optimization
 python experimental_framework/ppo_hyperparameter_optimizer.py
-```
 
-#### **Algorithm Comparison**
-```bash
-# Compare all algorithms across environments
-python experimental_framework/algorithm_comparison.py
-
-# Statistical analysis with multiple runs
-python experimental_framework/algorithm_comparison.py --runs 5 --episodes 100
+# Options:
+# --quick              Quick mode
+# --episodes N         Episodes per configuration
+# --environments LIST  Environments to optimize for
 ```
 
 #### **Ablation Studies**
 ```bash
 # Network architecture ablation
-python experimental_framework/ablation_studies.py --study architecture
+python experimental_framework/ablation_studies.py
 
-# Component importance analysis
-python experimental_framework/ablation_studies.py --study components
+# Options:
+# --quick              Quick mode with fewer architectures
+# --episodes N         Episodes per architecture
+# --study {architecture,components}  Type of ablation study
 ```
+
+#### **Evaluation Framework**
+```bash
+# Comprehensive evaluation with advanced metrics
+python experimental_framework/evaluation_framework.py
+
+# Options:
+# --quick              Quick mode
+# --episodes N         Episodes for evaluation
+# --metrics LIST       Specific metrics to compute
+# --statistical_tests  Run statistical significance tests
+```
+
+### **Visualization Scripts**
+
+#### **Reproduce Report Figures**
+```bash
+# Generate learning curves (Figure 2)
+python experimental_framework/learning_curves_generator.py
+
+# Generate network architecture comparison (Figure 3)
+python experimental_framework/network_vis.py
+
+# Generate cross-environment performance comparison (Figure 1)
+python experimental_framework/cross_environment_performance.py
+```
+
+**Note**: Visualization scripts read data from experiment outputs. Run the corresponding experiment scripts first:
+- `learning_curves_generator.py` reads from `algorithm_comparison.py` output
+- `network_vis.py` reads from `ablation_studies.py` output  
+- `cross_environment_performance.py` reads from `evaluation_framework.py` output
 
 ## Project Structure
 
@@ -214,14 +260,15 @@ python experimental_framework/ablation_studies.py --study components
 │   ├── gui.py                   # Visualization interface
 │   ├── helpers.py               # Utility functions
 │   └── create_restaurant_grids.py  # Grid generation
-├── experimental_framework/      # Comprehensive experimental analysis
-│   ├── master_experiment_runner.py     # Coordinates all experiments
-│   ├── hyperparameter_tuner.py         # Systematic hyperparameter optimization
+├── experimental_framework/      # Individual experimental scripts
+│   ├── algorithm_comparison.py  # Multi-algorithm comparison
+│   ├── hyperparameter_tuner.py  # DQN hyperparameter optimization
 │   ├── ppo_hyperparameter_optimizer.py # PPO-specific tuning
-│   ├── algorithm_comparison.py         # Multi-algorithm comparison
-│   ├── ablation_studies.py             # Component importance analysis
-│   ├── evaluation_framework.py         # Advanced RL metrics
-│   └── statistical_analysis.py         # Statistical significance testing
+│   ├── ablation_studies.py      # Component importance analysis
+│   ├── evaluation_framework.py  # Advanced RL metrics
+│   ├── learning_curves_generator.py    # Generate Figure 2
+│   ├── network_vis.py           # Generate Figure 3
+│   └── cross_environment_performance.py # Generate Figure 1
 ├── grid_configs/
 │   ├── A1_grid.npy              # Main assignment grid
 │   └── A2/                      # Assignment 2 specific grids
@@ -262,45 +309,43 @@ Discrete movement actions:
 - `2`: Move left
 - `3`: Move right
 
-## Experimental Framework
+## Reproducing Paper Results
 
-### **Master Experiment Runner**
-The `master_experiment_runner.py` coordinates comprehensive experimental analysis:
+### **Complete Experimental Pipeline**
+```bash
+# Step 1: Run all experiments (generates data)
+python experimental_framework/algorithm_comparison.py --runs 5 --episodes 100
+python experimental_framework/ablation_studies.py --episodes 100
+python experimental_framework/evaluation_framework.py --episodes 100 --statistical_tests
 
-#### **Phase 1: Hyperparameter Optimization**
-- **DQN**: Learning rate, network architecture, replay buffer, target updates
-- **PPO**: Learning rate, entropy coefficient, rollout steps, PPO epochs
-- **Environment-specific tuning**: Adaptive hyperparameters per grid complexity
+# Step 2: Generate all report figures
+python experimental_framework/learning_curves_generator.py    # Figure 2
+python experimental_framework/network_vis.py                 # Figure 3  
+python experimental_framework/cross_environment_performance.py # Figure 1
 
-#### **Phase 2: Algorithm Comparison**
-- **Algorithms**: Random, Heuristic, DQN, Double DQN, Dueling DQN, PPO
-- **Statistical validation**: Multiple seeds, ANOVA testing, confidence intervals
-- **Performance metrics**: Success rate, sample efficiency, asymptotic performance
-
-#### **Phase 3: Ablation Studies**
-- **Network architectures**: Impact of hidden units and depth
-- **Component analysis**: Experience replay, target networks, exploration strategies
-- **State representation**: Importance of different state vector components
-
-#### **Phase 4: Comprehensive Evaluation**
-- **Advanced RL metrics**: Convergence analysis, stability measures
-- **Cross-environment analysis**: Performance across different grid complexities
-- **Statistical significance**: Pairwise comparisons with effect sizes
-
-#### **Phase 5: Final Analysis**
-- **Automated reporting**: Markdown reports with key findings
-- **Deployment recommendations**: Best configurations for different scenarios
-- **Future work suggestions**: Technical improvements and extensions
-
-### **Output Organization**
+# Step 3: Run hyperparameter optimization (for tables)
+python experimental_framework/hyperparameter_tuner.py
+python experimental_framework/ppo_hyperparameter_optimizer.py
 ```
-experiments/master_run_YYYYMMDD_HHMMSS/
-├── hyperparameter_tuning/          # Phase 1 results
-├── algorithm_comparison/            # Phase 2 results
-├── ablation_studies/                # Phase 3 results
-├── comprehensive_evaluation/        # Phase 4 results
-├── final_analysis_report.md         # Comprehensive summary
-└── experiment_config.json          # Configuration used
+
+### **Individual Result Reproduction**
+```bash
+# Table 2: PPO environment-specific configurations
+python experimental_framework/ppo_hyperparameter_optimizer.py --all_environments
+
+# Table 3: ANOVA statistical analysis  
+python experimental_framework/evaluation_framework.py --statistical_tests
+
+# Table 4: Cross-environment performance comparison
+python experimental_framework/algorithm_comparison.py --runs 5
+
+# Table 5: Architecture ablation results
+python experimental_framework/ablation_studies.py
+
+# Figures 2-3: Learning curves and architecture comparison
+python experimental_framework/learning_curves_generator.py
+python experimental_framework/network_vis.py
+python experimental_framework/cross_environment_performance.py
 ```
 
 ## Expected Performance
@@ -320,11 +365,6 @@ experiments/master_run_YYYYMMDD_HHMMSS/
 4. **A1_grid** - DQN variants >70%, PPO ~45%
 5. **assignment2_main** - DQN variants >60%, PPO ~25%
 6. **maze_challenge** (Hardest) - DQN variants >55%, PPO ~20%
-
-### **Training Progress** (DQN)
-- **Episodes 0-20**: Random exploration, high negative rewards
-- **Episodes 20-50**: Learning basic navigation patterns
-- **Episodes 50+**: Policy refinement and optimization
 
 ## Key Insights
 
@@ -369,125 +409,29 @@ python experimental_framework/ppo_hyperparameter_optimizer.py  # Environment-spe
 python train.py grid_configs/A1_grid.npy --agent_type heuristic --episodes 20 --agent_start_pos 3 11
 ```
 
-## Full Experimental Suite (Unlimited Time)
-
-For reproducing the complete results presented in our research paper, use the comprehensive experimental framework. These experiments can take several hours to days depending on the scope.
-
-### **Complete Paper Reproduction**
+### **Experimental Framework Issues**
 ```bash
-# Full experimental suite (matches paper results exactly)
-python experimental_framework/master_experiment_runner.py --grid grid_configs/A1_grid.npy
+# Quick validation of all agents
+python experimental_framework/test_all_agents.py --episodes 5
 
-# Full mode parameters:
-# - 100 episodes per experiment
-# - 5 random seeds per comparison  
-# - 20 hyperparameter configurations
-# - All environments tested
-# - Complete statistical analysis
+# Memory issues with large experiments
+python experimental_framework/algorithm_comparison.py --quick  # Reduced parameters
 
-# Expected runtime: 4-8 hours depending on hardware
+# Missing experimental dependencies
+pip install -r requirements.txt
 ```
 
-### **Individual Experimental Phases**
+### **Visualization Issues**
 ```bash
-# Phase 1: Comprehensive hyperparameter optimization
-python experimental_framework/master_experiment_runner.py --phase hyperparams
-# Runtime: ~2-3 hours
+# If visualization scripts fail, ensure experiments are run first
+python experimental_framework/algorithm_comparison.py
+python experimental_framework/ablation_studies.py  
+python experimental_framework/evaluation_framework.py
 
-# Phase 2: Multi-algorithm comparison with full statistics
-python experimental_framework/master_experiment_runner.py --phase algorithms  
-# Runtime: ~1-2 hours
-
-# Phase 3: Complete ablation studies
-python experimental_framework/master_experiment_runner.py --phase ablation
-# Runtime: ~1-2 hours
-
-# Phase 4: Advanced evaluation metrics
-python experimental_framework/master_experiment_runner.py --phase evaluation
-# Runtime: ~1 hour
-```
-
-### **Cross-Environment Analysis**
-```bash
-# Test all algorithms across all 5 environments
-for env in grid_configs/A2/open_space.npy grid_configs/A2/simple_restaurant.npy grid_configs/A2/corridor_test.npy grid_configs/A1_grid.npy grid_configs/A2/maze_challenge.npy; do
-    python experimental_framework/master_experiment_runner.py --grid $env
-done
-
-# Runtime: ~20-40 hours total
-```
-
-### **Publication-Quality Results**
-```bash
-# Generate all figures and tables from paper
-python experimental_framework/master_experiment_runner.py --grid grid_configs/A1_grid.npy
-
-# Outputs include:
-# - Statistical significance tests (ANOVA, t-tests)
-# - Learning curves with 95% confidence intervals  
-# - Cross-environment performance matrices
-# - Architecture sensitivity analysis
-# - Deployment recommendations
-# - Automated final analysis report
-```
-
-### **Result Organization**
-```
-experiments/master_run_YYYYMMDD_HHMMSS/
-├── hyperparameter_tuning/          # Phase 1: Optimization results
-│   ├── dqn_tuning_results.json
-│   ├── ppo_tuning_results.json
-│   └── optimization_plots/
-├── algorithm_comparison/            # Phase 2: Multi-algorithm analysis
-│   ├── performance_comparison.json
-│   ├── statistical_tests.json
-│   └── comparison_plots/
-├── ablation_studies/                # Phase 3: Component analysis
-│   ├── architecture_ablation.json
-│   ├── component_importance.json
-│   └── ablation_plots/
-├── comprehensive_evaluation/        # Phase 4: Advanced metrics
-│   ├── convergence_analysis.json
-│   ├── stability_metrics.json
-│   └── evaluation_plots/
-├── final_analysis_report.md         # Automated comprehensive summary
-└── experiment_config.json          # Configuration used
-```
-
-### **Hardware Recommendations**
-- **Minimum**: 8GB RAM, 4 CPU cores, ~6-8 hours for full suite
-- **Recommended**: 16GB RAM, 8+ CPU cores, GPU optional, ~4-6 hours
-- **Optimal**: 32GB RAM, 16+ CPU cores, GPU with CUDA, ~2-4 hours
-
-### **Reproducing Specific Paper Results**
-```bash
-# Table 2: PPO environment-specific configurations
-python experimental_framework/ppo_hyperparameter_optimizer.py --all_environments
-
-# Table 3: ANOVA statistical analysis  
-python experimental_framework/algorithm_comparison.py --runs 5 --statistical_tests
-
-# Table 4: Cross-environment performance comparison
-python experimental_framework/master_experiment_runner.py --grid grid_configs/A1_grid.npy
-
-# Table 5: Architecture ablation results
-python experimental_framework/ablation_studies.py --study architecture --all_configs
-
-# Figure 2 & 3: Learning curves and architecture comparison
-python experimental_framework/master_experiment_runner.py --grid grid_configs/A1_grid.npy
-# Plots automatically generated in experiments/*/plots/
-```
-
-### **Performance Debugging**
-```bash
-# Hyperparameter sensitivity analysis
-python experimental_framework/ablation_studies.py --study architecture
-
-# Statistical significance verification
-python experimental_framework/algorithm_comparison.py --runs 5
-
-# Learning curve analysis
-python train.py grid_configs/A1_grid.npy --agent_type dqn --episodes 100 --no_gui
+# Then generate visualizations
+python experimental_framework/learning_curves_generator.py
+python experimental_framework/network_vis.py
+python experimental_framework/cross_environment_performance.py
 ```
 
 ### **GPU/CUDA Setup**
@@ -504,6 +448,6 @@ CUDA_VISIBLE_DEVICES="" python train.py grid_configs/A1_grid.npy --agent_type dq
 # Sanity check
 python train.py grid_configs/A1_grid.npy --agent_type random --episodes 1 --agent_start_pos 3 11
 
-# Experimental framework validation
-python experimental_framework/master_experiment_runner.py --quick --grid grid_configs/A2/open_space.npy
+# Test all agents quickly
+python experimental_framework/test_all_agents.py --episodes 1
 ```
